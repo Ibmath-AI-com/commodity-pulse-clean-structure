@@ -36,6 +36,24 @@ import { PredictionSidebar } from "./sections/prediction-sidebar";
 import { ForecastResultsCard } from "./sections/forecasting-result";
 import { RunTimeline } from "./sections/run-timeline";
 
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(v: unknown): v is UnknownRecord {
+  return typeof v === "object" && v !== null;
+}
+
+function asNumber(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function asString(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
 type JustTab = "drivers" | "risk" | "evidence" | "cali";
 
 type RunPredictionActionOut = { bundle: PredictionBundle };
@@ -185,7 +203,12 @@ export default function PredictionMain() {
         basisLabels,
         basePrices: selectedBasePrices as number[],
         region: "global",
-      })) as RunPredictionActionOut;
+      })) as unknown;
+
+      if (!isRecord(out) || !("bundle" in out)) {
+        throw new Error("Invalid API response: missing bundle");
+      }
+      const { bundle: nextBundle } = out as RunPredictionActionOut;
 
       if (!out || !out.bundle) throw new Error("Invalid API response: missing bundle");
 
@@ -194,10 +217,10 @@ export default function PredictionMain() {
       tlStep("refresh", "done", "Done.");
       tlHideSoon();
 
-      setBundle(out.bundle);
+      setBundle(nextBundle);
       setStatus("success");
-    } catch (e: any) {
-      const msg = e?.message || "Forecast failed";
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Forecast failed";
       tlStep("forecast", "error", msg);
       setStatus("error");
       setError(msg);
@@ -205,11 +228,10 @@ export default function PredictionMain() {
   }
 
   // Derived UI data
-  const result = useMemo(() => (bundle ? mapPayloadToResult(bundle as any) : null), [bundle]);
+  const result = useMemo(() => (bundle ? mapPayloadToResult(bundle) : null), [bundle]);
 
   const tenderUnit = result?.currency ? String(result.currency) : "USD/t";
-  const sentimentScore = (bundle as any)?.tender?.signals?.sentimentScore ?? null;
-
+  const sentimentScore = bundle?.tender?.signals?.sentimentScore ?? null;
   const score = typeof sentimentScore === "number" && Number.isFinite(sentimentScore) ? sentimentScore : null;
 
   const direction: Direction =
@@ -226,34 +248,38 @@ export default function PredictionMain() {
             ? "Slight"
             : "N/A";
 
-  const expectedRange = (bundle as any)?.expectedRange ?? null;
+  const expectedRange = (bundle as unknown as { expectedRange?: { p10?: number; p90?: number } }).expectedRange ?? null;
   const p10 = expectedRange?.p10 ?? null;
   const p90 = expectedRange?.p90 ?? null;
 
-  const caliRows = useMemo(
-    () => (Array.isArray((bundle as any)?.caliBidTable) ? ((bundle as any).caliBidTable as any[]) : []),
-    [bundle]
-  );
+  type CaliRow = Record<string, unknown>;
 
-  const optimalRow = useMemo(() => {
-    const rows = caliRows;
-    return rows.find((r: any) => String(r?.assessment ?? "").toLowerCase().includes("optimal")) ?? rows[0] ?? null;
-  }, [caliRows]);
-
-  const priceWindow = useMemo(() => {
-    const w = (bundle as any)?.market?.price_window;
-    return Array.isArray(w) ? w : [];
+  const caliRows = useMemo<CaliRow[]>(() => {
+    if (!bundle) return [];
+    const b = bundle as unknown as { caliBidTable?: unknown };
+    return asArray(b.caliBidTable).filter(isRecord);
   }, [bundle]);
 
-  const lastChange = useMemo(() => {
-    const w = priceWindow;
-    if (!w.length) return null;
-    const x = Number((w as any)[w.length - 1]?.change);
-    return Number.isFinite(x) ? x : null;
-  }, [priceWindow]);
+  const optimalRow = useMemo<CaliRow | null>(() => {
+    const rows = caliRows;
+    if (!rows.length) return null;
+    const found =
+      rows.find((r) => asString(r.assessment)?.toLowerCase().includes("optimal")) ?? null;
+    return found ?? rows[0] ?? null;
+  }, [caliRows]);
 
-  const driversRows: DriverRow[] = useMemo(() => {
-    if (!bundle) return [];
+  const priceWindow = useMemo<UnknownRecord[]>(() => {
+    const b = bundle as unknown as { market?: { price_window?: unknown } };
+    return asArray(b?.market?.price_window).filter(isRecord);
+  }, [bundle]);
+
+  const lastChange = useMemo<number | null>(() => {
+    if (!priceWindow.length) return null;
+    const last = priceWindow[priceWindow.length - 1];
+    return asNumber(last.change);
+  }, [priceWindow]);
+    const driversRows: DriverRow[] = useMemo(() => {
+      if (!bundle) return [];
 
     const momentumDir: Direction =
       lastChange == null ? "Neutral" : lastChange > 0 ? "Bullish" : lastChange < 0 ? "Bearish" : "Neutral";
@@ -286,8 +312,13 @@ export default function PredictionMain() {
     });
 
     const hasBand = Number.isFinite(p10) && Number.isFinite(p90);
-    const anchor = Number((bundle as any)?.market?.anchorPrice ?? (bundle as any)?.market?.basePrice ?? NaN);
+    const market = (bundle as unknown as { market?: UnknownRecord })?.market;
+    const anchor = Number(
+      (market?.anchorPrice ?? market?.basePrice) as unknown
+    );
 
+    const anchorOk = Number.isFinite(anchor);
+    
     const anchorDir: Direction =
       !Number.isFinite(anchor) || !hasBand ? "Neutral" : anchor < (p10 as number) ? "Bearish" : anchor > (p90 as number) ? "Bullish" : "Neutral";
 
@@ -343,30 +374,28 @@ export default function PredictionMain() {
     return rows;
   }, [bundle, p10, p90, score, lastChange]);
 
-  const evidenceRows: EvidenceRow[] = useMemo(() => {
-    if (!bundle) return [];
+const evidenceRows: EvidenceRow[] = useMemo(() => {
+  if (!bundle) return [];
 
-    const raw =
-      (Array.isArray((bundle as any)?.evidence) && (bundle as any).evidence) ||
-      (Array.isArray((bundle as any)?.news?.events) && (bundle as any).news.events) ||
-      [];
+  const b = bundle as unknown as { evidence?: unknown; news?: { events?: unknown } };
+  const raw = asArray(b.evidence).length ? asArray(b.evidence) : asArray(b.news?.events);
 
-    const items = (raw ?? []).filter((x: any) => {
-      const s = Number(x?.importance_score);
-      return Number.isFinite(s) ? s >= 0.3 : true;
-    });
+  const items = raw.filter(isRecord).filter((x) => {
+    const s = asNumber(x.importance_score);
+    return s == null ? true : s >= 0.3;
+  });
 
-    return items.map((x: any) => {
-      const dirRaw = String(x?.impact_direction ?? x?.direction ?? "neutral").toLowerCase();
-      const dir: Direction = dirRaw.includes("bear") ? "Bearish" : dirRaw.includes("bull") ? "Bullish" : "Neutral";
+  return items.map((x) => {
+    const dirRaw = (asString(x.impact_direction) ?? asString(x.direction) ?? "neutral").toLowerCase();
+    const dir: Direction = dirRaw.includes("bear") ? "Bearish" : dirRaw.includes("bull") ? "Bullish" : "Neutral";
 
-      const type = String(x?.event_type ?? x?.type ?? "event");
-      const head = String(x?.headline ?? "—");
-      const summary = String(x?.evidence_summary ?? x?.relevance ?? "—");
+    const type = asString(x.event_type) ?? asString(x.type) ?? "event";
+    const head = asString(x.headline) ?? "—";
+    const summary = asString(x.evidence_summary) ?? asString(x.relevance) ?? "—";
 
-      return { event: head, type, direction: dir, relevance: summary } as EvidenceRow;
-    });
-  }, [bundle]);
+    return { event: head, type, direction: dir, relevance: summary };
+  });
+}, [bundle]);
 
   function handlePrint() {
     if (status !== "success") return;

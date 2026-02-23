@@ -48,14 +48,17 @@ export default function DashboardMain(props: {
   initialInsights: Insight[];
 }) {
   // normalize server DTO -> client model
-  const seedRows = useMemo<DashboardPrediction[]>(
-    () =>
-      props.initialRows.map((r) => ({
-        ...(r as any),
-        createdAt: r.createdAt ? new Date(r.createdAt) : null,
-      })),
-    [props.initialRows]
-  );
+ type DashboardPredictionDto =
+  Omit<DashboardPrediction, "createdAt"> & { createdAt: string | null };
+
+const seedRows = useMemo<DashboardPrediction[]>(
+  () =>
+    props.initialRows.map((r: DashboardPredictionDto) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : null,
+    })),
+  [props.initialRows]
+);
 
   const [rows, setRows] = useState<DashboardPrediction[]>(seedRows);
   const [kpis, setKpis] = useState<DashboardKpis>(props.initialKpis);
