@@ -48,14 +48,17 @@ export default function DashboardMain(props: {
   initialInsights: Insight[];
 }) {
   // normalize server DTO -> client model
-  const seedRows = useMemo<DashboardPrediction[]>(
-    () =>
-      props.initialRows.map((r) => ({
-        ...(r as any),
-        createdAt: r.createdAt ? new Date(r.createdAt) : null,
-      })),
-    [props.initialRows]
-  );
+ type DashboardPredictionDto =
+  Omit<DashboardPrediction, "createdAt"> & { createdAt: string | null };
+
+const seedRows = useMemo<DashboardPrediction[]>(
+  () =>
+    props.initialRows.map((r: DashboardPredictionDto) => ({
+      ...r,
+      createdAt: r.createdAt ? new Date(r.createdAt) : null,
+    })),
+  [props.initialRows]
+);
 
   const [rows, setRows] = useState<DashboardPrediction[]>(seedRows);
   const [kpis, setKpis] = useState<DashboardKpis>(props.initialKpis);
@@ -84,7 +87,7 @@ export default function DashboardMain(props: {
     try {
       const data = await refreshDashboardAction();
 
-      const nextRows: DashboardPrediction[] = (data.rows ?? []).map((r: any) => ({
+      const nextRows: DashboardPrediction[] = (data.rows ?? []).map((r) => ({
         ...r,
         createdAt: r.createdAt ? new Date(r.createdAt) : null,
       }));
@@ -92,8 +95,8 @@ export default function DashboardMain(props: {
       setRows(nextRows);
       setKpis(data.kpis);
       setInsights(data.insights);
-    } catch (e: any) {
-      setErr(e?.message || "Failed to refresh dashboard.");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to refresh dashboard.");
     } finally {
       setBusy(false);
     }

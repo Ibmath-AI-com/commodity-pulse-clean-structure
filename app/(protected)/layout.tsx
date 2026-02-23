@@ -1,6 +1,6 @@
 // FILE: src/app/(protected)/layout.tsx
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+//import { cookies } from "next/headers";
+//import { redirect } from "next/navigation";
 //import { adminAuth } from "@/lib/firebaseAdmin";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {

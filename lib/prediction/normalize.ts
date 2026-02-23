@@ -61,54 +61,89 @@ export function actionToImpact(actionRaw: string): "Up" | "Down" | "Risk" {
   return "Risk";
 }
 
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(v: unknown): v is UnknownRecord {
+  return typeof v === "object" && v !== null;
+}
+
+function hasStringOutput(v: unknown): v is UnknownRecord & { output: string } {
+  return isRecord(v) && typeof v.output === "string";
+}
+
+function hasObjectOutput(v: unknown): v is UnknownRecord & { output: UnknownRecord } {
+  return isRecord(v) && isRecord(v.output);
+}
+
+function looksLikeBundle(o: UnknownRecord): boolean {
+  return (
+    "tender" in o ||
+    "caliBidTable" in o ||
+    "tenderPredictedPrice" in o ||
+    "tenderAction" in o
+  );
+}
+
 /**
  * Normalize any n8n response into a PredictionBundle.
  * IMPORTANT: This is pure normalization; network calls belong in infrastructure/services.
  */
 export function normalizeN8nPayload(raw: unknown): PredictionBundle {
-  let p: any = Array.isArray(raw) ? raw[0] : raw;
+  let p: unknown = Array.isArray(raw) ? raw[0] : raw;
 
-  if (p && typeof p.output === "string") {
+  if (hasStringOutput(p)) {
     const parsed = parseMaybeJsonString(p.output);
     if (parsed) p = parsed;
   }
 
-  if (p && typeof p.output === "object" && p.output) {
-    const o = p.output as any;
-    if (o.tender || o.caliBidTable || o.tenderPredictedPrice || o.tenderAction) p = o;
+  if (hasObjectOutput(p)) {
+    const o = p.output;
+    if (looksLikeBundle(o)) p = o;
   }
 
   // If workflow returns top-level tender fields, wrap them
-  if (!p?.tender && (p?.tenderAction || p?.tenderPredictedPrice != null || p?.unit)) {
+  if (isRecord(p) && !("tender" in p) && ("tenderAction" in p || "tenderPredictedPrice" in p || "unit" in p)) {
+    const tenderAction = "tenderAction" in p ? p.tenderAction : undefined;
+    const tenderPredictedPrice = "tenderPredictedPrice" in p ? p.tenderPredictedPrice : undefined;
+    const unit = "unit" in p ? p.unit : undefined;
+
     p = {
       ...p,
       tender: {
-        tenderAction: p.tenderAction ?? "PASS",
-        tenderPredictedPrice: p.tenderPredictedPrice ?? null,
-        unit: p.unit ?? "USD/t",
-        confidence: normalizeConfidence(p.confidence),
-        decisionConfidence: p.decisionConfidence ?? undefined,
-        rationale: p.rationale ?? "",
-        signals: p.signals ?? undefined,
+        tenderAction: tenderAction ?? "PASS",
+        tenderPredictedPrice: tenderPredictedPrice ?? null,
+        unit: unit ?? "USD/t",
+        confidence: normalizeConfidence("confidence" in p ? p.confidence : undefined),
+        decisionConfidence: "decisionConfidence" in p ? p.decisionConfidence : undefined,
+        rationale: ("rationale" in p ? p.rationale : "") ?? "",
+        signals: "signals" in p ? p.signals : undefined,
       },
     };
   }
 
   // Ensure decisionConfidence exists if alignmentScore exists
-  const a = p?.tender?.signals?.alignmentScore;
-  if (p?.tender && p.tender.decisionConfidence == null && typeof a === "number") {
-    p = {
-      ...p,
-      tender: {
-        ...p.tender,
-        decisionConfidence: labelFromAlignmentScore(a),
-      },
-    };
+  if (isRecord(p)) {
+    const tender = isRecord(p.tender) ? p.tender : null;
+    const signals = tender && isRecord(tender.signals) ? tender.signals : null;
+    const alignmentScore = signals?.alignmentScore;
+
+    if (tender && tender.decisionConfidence == null && typeof alignmentScore === "number") {
+      p = {
+        ...p,
+        tender: {
+          ...tender,
+          decisionConfidence: labelFromAlignmentScore(alignmentScore),
+        },
+      };
+    }
   }
 
   return p as PredictionBundle;
 }
 
 export function isApiMultiResponse(x: unknown): x is ApiMultiResponse {
-  return !!x && typeof x === "object" && Array.isArray((x as any).results);
+  return (
+    isRecord(x) &&
+    Array.isArray((x as { results?: unknown }).results)
+  );
 }

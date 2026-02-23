@@ -1,7 +1,18 @@
-// E:\AI Projects\commodity-clean-structure\src\infrastructure\services\session-api.service.ts
+// src/infrastructure/services/session-api.service.ts
 import "server-only";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/src/infrastructure/firebase/firebase.admin";
+
+type SessionValidationResult = {
+  uid: string;
+  email: string | null;
+};
+
+function getEmailFromDecoded(decoded: unknown): string | null {
+  if (typeof decoded !== "object" || decoded === null) return null;
+  const email = (decoded as { email?: unknown }).email;
+  return typeof email === "string" && email.trim() ? email : null;
+}
 
 export class SessionApiService {
   async createSessionCookie(input: { idToken: string }): Promise<void> {
@@ -25,15 +36,12 @@ export class SessionApiService {
     cookieStore.delete("session");
   }
 
-  async validateSessionCookie(input: { sessionCookie: string }) {
-    const decoded = await adminAuth.verifySessionCookie(
-      input.sessionCookie,
-      true
-    );
+  async validateSessionCookie(input: { sessionCookie: string }): Promise<SessionValidationResult> {
+    const decoded = await adminAuth.verifySessionCookie(input.sessionCookie, true);
 
     return {
       uid: decoded.uid,
-      email: (decoded as any).email ?? null,
+      email: getEmailFromDecoded(decoded),
     };
   }
 }

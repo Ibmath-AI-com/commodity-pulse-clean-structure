@@ -6,7 +6,7 @@ import { cx } from "@/lib/dashboard/utils";
 import type { DashboardKpiRowProps } from "@/src/entities/models/dashboard";
 
 export function CpKpiRow(props: DashboardKpiRowProps) {
-  const { activeForecasts, activeWowPct, accuracyRatePct, marketSignals, newSignalsToday } = props;
+  const { activeForecasts, activeWowPct, marketSignals, newSignalsToday } = props;
 
   return (
     <section className="grid grid-cols-12 gap-4">

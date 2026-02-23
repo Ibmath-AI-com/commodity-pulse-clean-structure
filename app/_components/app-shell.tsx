@@ -105,14 +105,15 @@ export function AppShell(props: {
     const onStorage = (e: StorageEvent) => {
       if (e.key === LS_COMMODITY) read();
     };
-    const onCommodity = () => read();
+    const onCommodityEvent: EventListener = () => read();
 
     window.addEventListener("storage", onStorage);
-    window.addEventListener("ai:commodity", onCommodity as any);
+    window.addEventListener("ai:commodity", onCommodityEvent);
+
 
     return () => {
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("ai:commodity", onCommodity as any);
+      window.removeEventListener("ai:commodity", onCommodityEvent);
     };
   }, []);
 

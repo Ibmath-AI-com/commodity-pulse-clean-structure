@@ -10,6 +10,23 @@ type SignInWithPasswordResponse = {
   idToken: string;
 };
 
+type FirebaseErrorResponse = {
+  error?: {
+    message?: string;
+    errors?: Array<{ message?: string }>;
+  };
+};
+
+function isSignInOk(x: unknown): x is SignInWithPasswordResponse {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    "localId" in x &&
+    "email" in x &&
+    "idToken" in x
+  );
+}
+
 export class FirebaseAuthServerService implements IAuthServerService {
   async authenticate(input: { email: string; password: string }): Promise<AuthCredential> {
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -20,7 +37,6 @@ export class FirebaseAuthServerService implements IAuthServerService {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Firebase REST expects password auth payload
         body: JSON.stringify({
           email: input.email,
           password: input.password,
@@ -30,27 +46,29 @@ export class FirebaseAuthServerService implements IAuthServerService {
       }
     );
 
-    const data = (await res.json()) as any;
+    const data: unknown = await res.json();
 
     if (!res.ok) {
-      // Keep error message deterministic but useful
+      const err = data as FirebaseErrorResponse;
       const msg =
-        data?.error?.message ||
-        data?.error?.errors?.[0]?.message ||
+        err?.error?.message ||
+        err?.error?.errors?.[0]?.message ||
         "Firebase auth failed";
       throw new Error(msg);
     }
 
-    const ok = data as SignInWithPasswordResponse;
+    if (!isSignInOk(data)) {
+      throw new Error("Invalid Firebase auth response");
+    }
 
     return {
-      uid: ok.localId,
-      email: ok.email,
-      getIdToken: async () => ok.idToken,
+      uid: data.localId,
+      email: data.email,
+      getIdToken: async () => data.idToken,
     };
   }
 
   async logout(): Promise<void> {
-    // Server-side: nothing to do here. Cookie clearing is handled by SessionService (/api/session/logout)
+    // Server-side: nothing to do here.
   }
 }

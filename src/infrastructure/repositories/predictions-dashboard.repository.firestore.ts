@@ -6,32 +6,53 @@ import type { IPredictionsDashboardRepository } from "@/src/application/reposito
 import type { DashboardPrediction, Status } from "@/src/entities/models/dashboard";
 import { adminDb } from "@/src/infrastructure/firebase/firebase.admin";
 
-function toDate(v: any): Date | null {
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(v: unknown): v is UnknownRecord {
+  return typeof v === "object" && v !== null;
+}
+
+type TimestampLike = { seconds: number };
+function isTimestampLike(v: unknown): v is TimestampLike {
+  return isRecord(v) && typeof (v as { seconds?: unknown }).seconds === "number";
+}
+
+type ToDateLike = { toDate: () => Date };
+function isToDateLike(v: unknown): v is ToDateLike {
+  return isRecord(v) && typeof (v as { toDate?: unknown }).toDate === "function";
+}
+
+function toDate(v: unknown): Date | null {
   if (!v) return null;
   if (v instanceof Date) return v;
-  if (typeof v?.toDate === "function") return v.toDate();
-  if (typeof v === "object" && typeof v.seconds === "number") return new Date(v.seconds * 1000);
+  if (isToDateLike(v)) return v.toDate();
+  if (isTimestampLike(v)) return new Date(v.seconds * 1000);
   return null;
 }
 
-function toStrArray(v: any): string[] | null {
-  return Array.isArray(v) ? v.map((x) => String(x)) : null;
+function toStrArray(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  return v.map((x) => String(x));
 }
 
-function toNumArray(v: any): number[] | null {
+function toNumArray(v: unknown): number[] | null {
   if (!Array.isArray(v)) return null;
-  const out = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+  const out = v
+    .map((x) => (typeof x === "number" ? x : Number(x)))
+    .filter((n) => Number.isFinite(n));
   return out.length ? out : null;
 }
 
-function normStatus(v: any): Status {
+function normStatus(v: unknown): Status {
   const s = String(v ?? "").toLowerCase();
   if (s === "success") return "success";
   if (s === "error") return "error";
   return "unknown";
 }
 
-export class FirestorePredictionsDashboardRepository implements IPredictionsDashboardRepository {
+export class FirestorePredictionsDashboardRepository
+  implements IPredictionsDashboardRepository
+{
   async getPredictionsForUser(uid: string, limitN: number): Promise<DashboardPrediction[]> {
     const snap = await adminDb
       .collection("predictions")
@@ -41,29 +62,30 @@ export class FirestorePredictionsDashboardRepository implements IPredictionsDash
       .get();
 
     return snap.docs.map((d) => {
-      const x: any = d.data();
+      const raw = d.data() as unknown;
+      const x: UnknownRecord = isRecord(raw) ? raw : {};
 
       return {
         id: d.id,
-        uid: String(x?.uid ?? uid),
+        uid: String(x.uid ?? uid),
 
-        createdAt: toDate(x?.createdAt),
-        runtimeMs: typeof x?.runtimeMs === "number" ? x.runtimeMs : null,
+        createdAt: toDate(x.createdAt),
+        runtimeMs: typeof x.runtimeMs === "number" ? x.runtimeMs : null,
 
-        commodity: x?.commodity ?? null,
-        futureDate: x?.futureDate ?? null,
+        commodity: (x.commodity ?? null) as DashboardPrediction["commodity"],
+        futureDate: (x.futureDate ?? null) as DashboardPrediction["futureDate"],
 
-        basisLabels: toStrArray(x?.basisLabels),
-        basisKeys: toStrArray(x?.basisKeys),
-        basePrices: toNumArray(x?.basePrices),
+        basisLabels: toStrArray(x.basisLabels),
+        basisKeys: toStrArray(x.basisKeys),
+        basePrices: toNumArray(x.basePrices),
 
-        status: normStatus(x?.status),
-        n8nHttpStatus: typeof x?.n8nHttpStatus === "number" ? x.n8nHttpStatus : null,
+        status: normStatus(x.status),
+        n8nHttpStatus: typeof x.n8nHttpStatus === "number" ? x.n8nHttpStatus : null,
 
-        outputs: x?.outputs ?? null,
-        error: x?.error ?? null,
+        outputs: (x.outputs ?? null) as DashboardPrediction["outputs"],
+        error: (x.error ?? null) as DashboardPrediction["error"],
 
-        news: x?.news ?? null,
+        news: (x.news ?? null) as DashboardPrediction["news"],
       };
     });
   }

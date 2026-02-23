@@ -9,7 +9,7 @@ import { HttpGcsService } from "@/src/infrastructure/services/gcs.service.http";
 import { N8nPredictionEngineService } from "@/src/infrastructure/services/prediction-engine.service.n8n";
 import { GcsUploadListService } from "@/src/infrastructure/services/upload-list.service.gcs";
 
-import { N8nReportGeneratorService } from "@/src/infrastructure/services/report-generator.service.n8n";
+//import { N8nReportGeneratorService } from "@/src/infrastructure/services/report-generator.service.n8n";
 
 import type { IN8nService } from "@/src/application/services/n8n.service.interface";
 // NOTE: keep type import if you want, but it is unused in this module
@@ -18,12 +18,12 @@ import type { IGcsService } from "@/src/application/services/gcs.service.interfa
 import { FirestorePredictionsRepository } from "@/src/infrastructure/repositories/predictions.repository.firestore";
 
 import { executePredictionUseCase } from "@/src/application/use-cases/prediction/execute-prediction.use-case";
-import { generateReportUseCase } from "@/src/application/use-cases/prediction/generate-report.use-case";
+//import { generateReportUseCase } from "@/src/application/use-cases/prediction/generate-report.use-case";
 import { getUploadListUseCase } from "@/src/application/use-cases/prediction/get-upload-list.use-case";
 import { ensureSignalsUseCase } from "@/src/application/use-cases/prediction/ensure-signals.use-case";
 
 import { runPredictionController } from "@/src/interface-adapters/controllers/prediction/execute-prediction.controller";
-import { generateReportController } from "@/src/interface-adapters/controllers/prediction/generate-report.controller";
+//import { generateReportController } from "@/src/interface-adapters/controllers/prediction/generate-report.controller";
 import { getUploadListController } from "@/src/interface-adapters/controllers/prediction/get-upload-list.controller";
 
 export function createPredictionModule() {
