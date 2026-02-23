@@ -1,25 +1,15 @@
-name: Tests
+name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - "release/*"
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "package.json"
-      - "package-lock.json"
-      - "di/**"
-      - "lib/**"
   pull_request:
-    branches:
-      - main
-      - "release/*"
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +20,17 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install
+      - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Test
-        run: npm test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
