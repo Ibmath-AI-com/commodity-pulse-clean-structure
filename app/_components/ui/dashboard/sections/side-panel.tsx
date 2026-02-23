@@ -15,7 +15,6 @@ export function CpFiltersAside({
   totalCount,
   busy,
   uid,
-  onClear,
   onRefresh,
   err,
 }: DashboardFiltersProps) {

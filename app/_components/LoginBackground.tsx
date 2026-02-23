@@ -1,7 +1,7 @@
 "use client";
 
 
-import Image from "next/image";
+//import Image from "next/image";
 import { useEffect, useRef } from "react";
 
 export default function LoginBackground() {
@@ -37,11 +37,12 @@ export default function LoginBackground() {
     const particleCount = 80;
     const connectionDistance = 150;
 
-    const colors = [
-      "rgba(102, 126, 234, 0.55)",
-      "rgba(139, 92, 246, 0.45)",
-      "rgba(236, 72, 153, 0.35)",
-    ];
+
+   // const colors = [
+   //   "rgba(102, 126, 234, 0.55)",
+   //   "rgba(139, 92, 246, 0.45)",
+   //   "rgba(236, 72, 153, 0.35)",
+   // ];
 
 
     for (let i = 0; i < particleCount; i++) {

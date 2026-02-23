@@ -69,7 +69,7 @@ function getStorage(): Storage {
   return _storage;
 }
 
-function resolveBucketName(_which: GcsBucketKey) {
+function resolveBucketName(_: GcsBucketKey) {
   const cfg = requireGcsConfig();
   return cfg.bucket;
 }

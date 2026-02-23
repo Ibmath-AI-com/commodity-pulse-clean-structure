@@ -21,8 +21,6 @@ import type {
   RiskPayload,
   RiskItem,
   RiskLevel,
-  MultiItem,
-  Result,
 } from "./types/types";
 
 import type { PredictionBundle } from "@/src/entities/models/prediction";

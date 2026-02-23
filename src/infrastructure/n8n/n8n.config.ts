@@ -13,13 +13,6 @@ function req(name: string): string {
   return v;
 }
 
-function reqNumber(name: string, fallback: number): number {
-  const raw = opt(name);
-  if (!raw) return fallback;
-  const n = Number(raw);
-  if (!Number.isFinite(n)) throw new Error(`Invalid number env: ${name}`);
-  return n;
-}
 
 /**
  * Non-throwing snapshot. Safe to import anywhere (including /login).

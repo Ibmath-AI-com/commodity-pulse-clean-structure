@@ -58,7 +58,7 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
                 <h2 className="tt-login-companyRest">Commodity Pulse</h2>
               </div>
             </div>
-
+             {error && <p className="error">{error}</p>}
             <form
               className="form"
                onSubmit={onSubmit} 
