@@ -2,8 +2,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-
-import { getInjection } from "@/di/container";
 import { AuthenticationError, UnauthenticatedError } from "@/src/entities/errors/auth";
 
 export async function runPredictionAction(input: {
@@ -14,6 +12,8 @@ export async function runPredictionAction(input: {
   basePrices: number[];
   region?: string;
 }) {
+  const { getInjection } = await import("@/di/container");
+
   const instrumentation = getInjection("IInstrumentationService");
 
   return instrumentation.startSpan(
