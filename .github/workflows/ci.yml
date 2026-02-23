@@ -22,8 +22,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Debug context
         run: |
           set -euxo pipefail
           echo "PWD=$(pwd)"
