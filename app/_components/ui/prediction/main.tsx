@@ -18,6 +18,11 @@ import type {
   RunTimelineState,
   RunStepKey,
   StepState,
+  RiskPayload,
+  RiskItem,
+  RiskLevel,
+  MultiItem,
+  Result,
 } from "./types/types";
 
 import type { PredictionBundle } from "@/src/entities/models/prediction";
@@ -54,9 +59,20 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
-type JustTab = "drivers" | "risk" | "evidence" | "cali";
+function getNestedValue(root: unknown, path: string[]): unknown {
+  let cur: unknown = root;
+  for (const k of path) {
+    if (!isRecord(cur)) return undefined;
+    cur = cur[k];
+  }
+  return cur;
+}
 
-type RunPredictionActionOut = { bundle: PredictionBundle };
+function getRowString(row: UnknownRecord | null, key: string): string | null {
+  if (!row) return null;
+  const v = row[key];
+  return typeof v === "string" || typeof v === "number" ? String(v) : null;
+}
 
 function normalizeBasisKeyForApi(k: string) {
   return String(k ?? "")
@@ -64,6 +80,40 @@ function normalizeBasisKeyForApi(k: string) {
     .toLowerCase()
     .replace(/-+/g, " ")
     .replace(/\s+/g, " ");
+}
+
+type JustTab = "drivers" | "risk" | "evidence" | "cali";
+
+type RunPredictionActionOut = { bundle: PredictionBundle };
+
+function toRiskPayload(v: unknown): RiskPayload {
+  if (!isRecord(v)) return { items: [] };
+
+  const rawItems = v.items;
+  const items: RiskItem[] = Array.isArray(rawItems)
+    ? rawItems
+        .filter(isRecord)
+        .map((it) => {
+          const levelRaw = it.level;
+          const level: RiskLevel | undefined =
+            levelRaw === "HIGH" || levelRaw === "MEDIUM" || levelRaw === "LOW"
+              ? levelRaw
+              : undefined;
+
+          return {
+            key: typeof it.key === "string" ? it.key : undefined,
+            title: typeof it.title === "string" ? it.title : undefined,
+            level,
+            bullet: typeof it.bullet === "string" ? it.bullet : undefined,
+          };
+        })
+    : [];
+
+  return {
+    asOf: typeof v.asOf === "string" || v.asOf === null ? (v.asOf as string | null) : undefined,
+    modelVersion: typeof v.modelVersion === "number" ? v.modelVersion : undefined,
+    items,
+  };
 }
 
 export default function PredictionMain() {
@@ -181,36 +231,31 @@ export default function PredictionMain() {
 
     try {
       const basisKeys = (basis ?? []).filter(Boolean).slice(0, MAX_BASIS);
-
       const basisLabels = basisKeys.map((k) => BASES.find((b) => b.value === k)?.label ?? k);
-
       const selectedBasePrices = basisKeys.map((b) => toNumberLoose(basePricesByBasis?.[b] ?? ""));
 
-      // Keep current UX: require all base prices.
       if (selectedBasePrices.some((x) => x == null)) {
         throw new Error("Missing base price for one or more selected bases.");
       }
 
       tlStep("forecast", "running", "Running forecast…");
 
-      // UI sends normalized keys to API (spaces), but keeps dashed keys locally for UI labels.
       const basisKeysNormalized = basisKeys.map(normalizeBasisKeyForApi);
 
-      const out = (await runPredictionAction({
+      const out: unknown = await runPredictionAction({
         commodity: commodity.trim().toLowerCase(),
         futureDate,
         basisKeys: basisKeysNormalized,
         basisLabels,
         basePrices: selectedBasePrices as number[],
         region: "global",
-      })) as unknown;
+      });
 
       if (!isRecord(out) || !("bundle" in out)) {
         throw new Error("Invalid API response: missing bundle");
       }
-      const { bundle: nextBundle } = out as RunPredictionActionOut;
 
-      if (!out || !out.bundle) throw new Error("Invalid API response: missing bundle");
+      const nextBundle = (out as RunPredictionActionOut).bundle;
 
       tlStep("report", "done", "Signals ready.");
       tlStep("forecast", "done", "Forecast complete.");
@@ -248,29 +293,34 @@ export default function PredictionMain() {
             ? "Slight"
             : "N/A";
 
-  const expectedRange = (bundle as unknown as { expectedRange?: { p10?: number; p90?: number } }).expectedRange ?? null;
+  const expectedRange = useMemo(() => {
+    const er = getNestedValue(bundle, ["expectedRange"]);
+    if (!isRecord(er)) return null;
+    const p10 = asNumber(er.p10);
+    const p90 = asNumber(er.p90);
+    return { p10, p90 };
+  }, [bundle]);
+
   const p10 = expectedRange?.p10 ?? null;
   const p90 = expectedRange?.p90 ?? null;
 
-  type CaliRow = Record<string, unknown>;
+  type CaliRow = UnknownRecord;
 
   const caliRows = useMemo<CaliRow[]>(() => {
-    if (!bundle) return [];
-    const b = bundle as unknown as { caliBidTable?: unknown };
-    return asArray(b.caliBidTable).filter(isRecord);
+    const tbl = getNestedValue(bundle, ["caliBidTable"]);
+    return asArray(tbl).filter(isRecord);
   }, [bundle]);
 
   const optimalRow = useMemo<CaliRow | null>(() => {
-    const rows = caliRows;
-    if (!rows.length) return null;
+    if (!caliRows.length) return null;
     const found =
-      rows.find((r) => asString(r.assessment)?.toLowerCase().includes("optimal")) ?? null;
-    return found ?? rows[0] ?? null;
+      caliRows.find((r) => asString(r.assessment)?.toLowerCase().includes("optimal")) ?? null;
+    return found ?? caliRows[0] ?? null;
   }, [caliRows]);
 
   const priceWindow = useMemo<UnknownRecord[]>(() => {
-    const b = bundle as unknown as { market?: { price_window?: unknown } };
-    return asArray(b?.market?.price_window).filter(isRecord);
+    const pw = getNestedValue(bundle, ["market", "price_window"]);
+    return asArray(pw).filter(isRecord);
   }, [bundle]);
 
   const lastChange = useMemo<number | null>(() => {
@@ -278,8 +328,9 @@ export default function PredictionMain() {
     const last = priceWindow[priceWindow.length - 1];
     return asNumber(last.change);
   }, [priceWindow]);
-    const driversRows: DriverRow[] = useMemo(() => {
-      if (!bundle) return [];
+
+  const driversRows: DriverRow[] = useMemo(() => {
+    if (!bundle) return [];
 
     const momentumDir: Direction =
       lastChange == null ? "Neutral" : lastChange > 0 ? "Bullish" : lastChange < 0 ? "Bearish" : "Neutral";
@@ -294,7 +345,10 @@ export default function PredictionMain() {
       driver: "Price momentum (latest move)",
       direction: momentumDir,
       strength: momentumStrength,
-      explanation: lastChange == null ? "No price change data available." : `Most recent change is ${lastChange > 0 ? "+" : ""}${lastChange} USD/t.`,
+      explanation:
+        lastChange == null
+          ? "No price change data available."
+          : `Most recent change is ${lastChange > 0 ? "+" : ""}${lastChange} USD/t.`,
     });
 
     const s = score;
@@ -312,15 +366,20 @@ export default function PredictionMain() {
     });
 
     const hasBand = Number.isFinite(p10) && Number.isFinite(p90);
-    const market = (bundle as unknown as { market?: UnknownRecord })?.market;
-    const anchor = Number(
-      (market?.anchorPrice ?? market?.basePrice) as unknown
-    );
+    const market = getNestedValue(bundle, ["market"]);
+    const marketRec = isRecord(market) ? market : null;
 
-    const anchorOk = Number.isFinite(anchor);
-    
+    const anchorRaw = marketRec?.anchorPrice ?? marketRec?.basePrice;
+    const anchor = typeof anchorRaw === "number" ? anchorRaw : Number(anchorRaw);
+
     const anchorDir: Direction =
-      !Number.isFinite(anchor) || !hasBand ? "Neutral" : anchor < (p10 as number) ? "Bearish" : anchor > (p90 as number) ? "Bullish" : "Neutral";
+      !Number.isFinite(anchor) || !hasBand
+        ? "Neutral"
+        : anchor < (p10 as number)
+          ? "Bearish"
+          : anchor > (p90 as number)
+            ? "Bullish"
+            : "Neutral";
 
     rows.push({
       driver: "Anchor positioning vs expected band",
@@ -338,7 +397,8 @@ export default function PredictionMain() {
     const rows: RiskRow[] = [];
     const hasBand = Number.isFinite(p10) && Number.isFinite(p90);
 
-    const bid = Number((bundle as any)?.tender?.tenderPredictedPrice);
+    const bidRaw = getNestedValue(bundle, ["tender", "tenderPredictedPrice"]);
+    const bid = typeof bidRaw === "number" ? bidRaw : Number(bidRaw);
     const bidOk = Number.isFinite(bid);
 
     const bearishSent = typeof score === "number" && score < -0.15;
@@ -374,28 +434,37 @@ export default function PredictionMain() {
     return rows;
   }, [bundle, p10, p90, score, lastChange]);
 
-const evidenceRows: EvidenceRow[] = useMemo(() => {
-  if (!bundle) return [];
+  const riskPayload = useMemo<RiskPayload>(() => {
+    const raw = getNestedValue(bundle, ["riskAnalysis"]);
+    return toRiskPayload(raw);
+  }, [bundle]);
 
-  const b = bundle as unknown as { evidence?: unknown; news?: { events?: unknown } };
-  const raw = asArray(b.evidence).length ? asArray(b.evidence) : asArray(b.news?.events);
+  const rawEvidenceEvents = useMemo<UnknownRecord[]>(() => {
+    const newsEvents = getNestedValue(bundle, ["news", "events"]);
+    const evidence = getNestedValue(bundle, ["evidence"]);
+    const arr = asArray(newsEvents).length ? asArray(newsEvents) : asArray(evidence);
+    return arr.filter(isRecord);
+  }, [bundle]);
 
-  const items = raw.filter(isRecord).filter((x) => {
-    const s = asNumber(x.importance_score);
-    return s == null ? true : s >= 0.3;
-  });
+  const evidenceRows: EvidenceRow[] = useMemo(() => {
+    if (!bundle) return [];
 
-  return items.map((x) => {
-    const dirRaw = (asString(x.impact_direction) ?? asString(x.direction) ?? "neutral").toLowerCase();
-    const dir: Direction = dirRaw.includes("bear") ? "Bearish" : dirRaw.includes("bull") ? "Bullish" : "Neutral";
+    const items = rawEvidenceEvents.filter((x) => {
+      const s = asNumber(x.importance_score);
+      return s == null ? true : s >= 0.3;
+    });
 
-    const type = asString(x.event_type) ?? asString(x.type) ?? "event";
-    const head = asString(x.headline) ?? "—";
-    const summary = asString(x.evidence_summary) ?? asString(x.relevance) ?? "—";
+    return items.map((x) => {
+      const dirRaw = (asString(x.impact_direction) ?? asString(x.direction) ?? "neutral").toLowerCase();
+      const dir: Direction = dirRaw.includes("bear") ? "Bearish" : dirRaw.includes("bull") ? "Bullish" : "Neutral";
 
-    return { event: head, type, direction: dir, relevance: summary };
-  });
-}, [bundle]);
+      const type = asString(x.event_type) ?? asString(x.type) ?? "event";
+      const head = asString(x.headline) ?? "—";
+      const summary = asString(x.evidence_summary) ?? asString(x.relevance) ?? "—";
+
+      return { event: head, type, direction: dir, relevance: summary };
+    });
+  }, [bundle, rawEvidenceEvents]);
 
   function handlePrint() {
     if (status !== "success") return;
@@ -431,7 +500,9 @@ const evidenceRows: EvidenceRow[] = useMemo(() => {
                     <ArrowRight size={14} className="th-inline" /> Recommended Action:
                     <strong>
                       {bundle?.tender?.tenderAction ? String(bundle.tender.tenderAction) : "—"} at{" "}
-                      {optimalRow?.caliBidRangeFob ? String(optimalRow.caliBidRangeFob).replace(/\s*-\s*/g, "–") : "—"}{" "}
+                      {optimalRow?.caliBidRangeFob
+                        ? String(optimalRow.caliBidRangeFob).replace(/\s*-\s*/g, "–")
+                        : "—"}{" "}
                       {tenderUnit}
                       {" - "}
                       {selectedBases?.[0]?.label ?? "—"}
@@ -442,8 +513,8 @@ const evidenceRows: EvidenceRow[] = useMemo(() => {
                     <strong>Rationale:</strong>{" "}
                     {optimalRow ? (
                       <>
-                        {String((optimalRow as any)?.chanceToWin ?? "—")} win probability + balanced margin (
-                        {String((optimalRow as any)?.marginPerTon ?? "—")})
+                        {getRowString(optimalRow, "chanceToWin") ?? "—"} win probability + balanced margin (
+                        {getRowString(optimalRow, "marginPerTon") ?? "—"})
                       </>
                     ) : bundle?.tender?.rationale ? (
                       String(bundle.tender.rationale)
@@ -475,7 +546,7 @@ const evidenceRows: EvidenceRow[] = useMemo(() => {
 
             <div className="dashboard-grid">
               <ForecastResultsCard
-                bundle={bundle as any}
+                bundle={bundle}
                 tenderUnit={tenderUnit}
                 p10={p10}
                 p90={p90}
@@ -483,25 +554,19 @@ const evidenceRows: EvidenceRow[] = useMemo(() => {
                 direction={direction}
                 strength={strength}
               />
-              <RiskAnalysisPanel risk={(bundle as any)?.riskAnalysis ?? { items: [] }} />
+              <RiskAnalysisPanel risk={riskPayload} />
             </div>
 
             <DetailedBidAnalysis
-              justTab={justTab as any}
-              setJustTab={setJustTab as any}
+              justTab={justTab}
+              setJustTab={setJustTab}
               legendOpen={legendOpen}
               setLegendOpen={setLegendOpen}
               driversRows={driversRows}
               risksRows={risksRows}
               evidenceRows={evidenceRows}
-              caliRows={caliRows as any}
-              rawEvidenceEvents={
-                Array.isArray((bundle as any)?.news?.events)
-                  ? (bundle as any).news.events
-                  : Array.isArray((bundle as any)?.evidence)
-                    ? (bundle as any).evidence
-                    : []
-              }
+              caliRows={caliRows}
+              rawEvidenceEvents={rawEvidenceEvents}
             />
           </main>
         </div>

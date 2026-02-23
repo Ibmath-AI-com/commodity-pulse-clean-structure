@@ -87,7 +87,7 @@ const seedRows = useMemo<DashboardPrediction[]>(
     try {
       const data = await refreshDashboardAction();
 
-      const nextRows: DashboardPrediction[] = (data.rows ?? []).map((r: any) => ({
+      const nextRows: DashboardPrediction[] = (data.rows ?? []).map((r) => ({
         ...r,
         createdAt: r.createdAt ? new Date(r.createdAt) : null,
       }));
@@ -95,8 +95,8 @@ const seedRows = useMemo<DashboardPrediction[]>(
       setRows(nextRows);
       setKpis(data.kpis);
       setInsights(data.insights);
-    } catch (e: any) {
-      setErr(e?.message || "Failed to refresh dashboard.");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to refresh dashboard.");
     } finally {
       setBusy(false);
     }
