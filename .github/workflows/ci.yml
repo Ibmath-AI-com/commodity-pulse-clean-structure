@@ -23,26 +23,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Debug context
-        run: |
-          set -euxo pipefail
-          echo "PWD=$(pwd)"
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-          echo "---- scripts ----"
-          node -e "const p=require('./package.json'); console.log(p.scripts)"
-          echo "---- next lint cmd ----"
-          node -p "require('./package.json').scripts.lint"
-          echo "---- node/npm ----"
-          node -v
-          npm -v
-          echo "---- next resolved ----"
-          npx --yes next --version
-          echo "---- what is /lint? ----"
-          test -d lint && echo "lint dir exists" || echo "NO lint dir"
-          echo "---- run lint verbosely ----"
-          npm run lint --loglevel verbose
-
       - name: Lint
         run: npm run lint
 
