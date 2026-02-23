@@ -1,4 +1,4 @@
-// E:\AI Projects\commodity-clean-structure\app\(protected)\dashboard\page.tsx
+// commodity-clean-structure\app\(protected)\dashboard\page.tsx
 import { redirect } from "next/navigation";
 
 import { AuthenticationError, UnauthenticatedError } from "@/src/entities/errors/auth";
