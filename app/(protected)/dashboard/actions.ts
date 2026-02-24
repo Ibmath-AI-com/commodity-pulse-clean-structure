@@ -16,6 +16,7 @@ export async function getDashboardAction() {
         const controller = getInjection("IGetDashboardController");
         return await controller();
       } catch (err) {
+        console.error("GET_DASHBOARD_FAILED", err);
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
           redirect("/sign-in");
         }
