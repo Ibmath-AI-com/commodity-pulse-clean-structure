@@ -13,6 +13,8 @@ import type { IGcsService } from "@/src/application/services/gcs.service.interfa
 import type { IPredictionsRepository } from "@/src/application/repositories/predictions.repository.interface";
 import type { IPredictionsDashboardRepository } from "@/src/application/repositories/predictions-dashboard.repository.interface";
 import type { IUserProfilesRepository } from "@/src/application/repositories/user-profiles.repository.interface";
+import type { IReportsRepository } from "@/src/application/repositories/reports.repository.interface";
+import type { IReportStorageService } from "@/src/application/services/report-storage.service.interface";
 
 
 import type { ILoginUseCase } from "@/src/application/use-cases/auth/login.use-case";
@@ -25,6 +27,10 @@ import type { IGenerateReportUseCase } from "@/src/application/use-cases/predict
 import type { IGetUploadListUseCase } from "@/src/application/use-cases/prediction/get-upload-list.use-case";
 import type { IEnsureSignalsUseCase } from "@/src/application/use-cases/prediction/ensure-signals.use-case";
 
+import type { IGetReportsListUseCase } from "@/src/application/use-cases/report/get-reports-list.use-case";
+import type { IGetReportUrlUseCase } from "@/src/application/use-cases/report/get-report-url.use-case";
+import type { IReadReportUseCase } from "@/src/application/use-cases/report/read-report.use-case";
+
 
 import type { ILoginController } from "@/src/interface-adapters/controllers/auth/login.controller";
 import type { ILogoutController } from "@/src/interface-adapters/controllers/auth/logout.controller";
@@ -32,6 +38,8 @@ import type { IGetDashboardController } from "@/src/interface-adapters/controlle
 import type { IRunPredictionController } from "@/src/interface-adapters/controllers/prediction/execute-prediction.controller";
 import type { IGenerateReportController } from "@/src/interface-adapters/controllers/prediction/generate-report.controller";
 import type { IGetUploadListController } from "@/src/interface-adapters/controllers/prediction/get-upload-list.controller";
+
+import type { IReportsController } from "@/src/interface-adapters/controllers/report/reports.controller";
 
 
 export const DI_SYMBOLS = {
@@ -49,13 +57,15 @@ export const DI_SYMBOLS = {
   IUserProfilesRepository: Symbol.for("IUserProfilesRepository"),
   IPredictionsDashboardRepository: Symbol.for("IPredictionsDashboardRepository"),
   IPredictionsRepository: Symbol.for("IPredictionsRepository"),
+  IReportsRepository: Symbol.for("IReportsRepository"),
+  IReportStorageService: Symbol.for("IReportStorageService"),
 
 
 
   // Use-Cases
   ILoginUseCase: Symbol.for("ILoginUseCase"),
   ILogoutUseCase: Symbol.for("ILogoutUseCase"),
-  
+
   IGetDashboardHistoryUseCase: Symbol.for("IGetDashboardHistoryUseCase"),
   IGetDashboardKpisUseCase: Symbol.for("IGetDashboardKpisUseCase"),
   IGetDashboardInsightsUseCase: Symbol.for("IGetDashboardInsightsUseCase"),
@@ -64,6 +74,9 @@ export const DI_SYMBOLS = {
   IGenerateReportUseCase: Symbol.for("IGenerateReportUseCase"),
   IGetUploadListUseCase: Symbol.for("IGetUploadListUseCase"),
   IEnsureSignalsUseCase: Symbol.for("IEnsureSignalsUseCase"),
+  IGetReportsListUseCase: Symbol.for("IGetReportsListUseCase"),
+  IGetReportUrlUseCase: Symbol.for("IGetReportUrlUseCase"),
+  IReadReportUseCase: Symbol.for("IReadReportUseCase"),
 
   // Controllers
   ILoginController: Symbol.for("ILoginController"),
@@ -72,6 +85,7 @@ export const DI_SYMBOLS = {
   IExecutePredictionController: Symbol.for("IExecutePredictionController"),
   IGenerateReportController: Symbol.for("IGenerateReportController"),
   IGetUploadListController: Symbol.for("IGetUploadListController"),
+  IReportsController: Symbol.for("IReportsController"),
 } as const;
 
 export interface DI_RETURN_TYPES {
@@ -90,6 +104,8 @@ export interface DI_RETURN_TYPES {
   IPredictionsRepository: IPredictionsRepository;
   IUserProfilesRepository: IUserProfilesRepository;
   IPredictionsDashboardRepository: IPredictionsDashboardRepository;
+  IReportsRepository: IReportsRepository;
+  IReportStorageService: IReportStorageService;
 
   ILoginUseCase: ILoginUseCase;
   ILogoutUseCase: ILogoutUseCase;
@@ -101,6 +117,9 @@ export interface DI_RETURN_TYPES {
   IGenerateReportUseCase: IGenerateReportUseCase;
   IGetUploadListUseCase: IGetUploadListUseCase;
   IEnsureSignalsUseCase: IEnsureSignalsUseCase;
+  IGetReportsListUseCase: IGetReportsListUseCase;
+  IGetReportUrlUseCase: IGetReportUrlUseCase;
+  IReadReportUseCase: IReadReportUseCase;
 
   ILoginController: ILoginController;
   ILogoutController: ILogoutController;
@@ -108,4 +127,5 @@ export interface DI_RETURN_TYPES {
   IExecutePredictionController: IRunPredictionController;
   IGenerateReportController: IGenerateReportController;
   IGetUploadListController: IGetUploadListController;
+  IReportsController: IReportsController;
 }
