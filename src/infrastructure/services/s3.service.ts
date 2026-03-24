@@ -47,7 +47,14 @@ function resolveBucketName(_: StorageBucketKey) {
   return cfg.bucket;
 }
 
-async function streamToString(stream: Readable | any): Promise<string> {
+function isReadableStream(value: unknown): value is Readable {
+  return value instanceof Readable;
+}
+
+async function streamToString(stream: unknown): Promise<string> {
+  if (!isReadableStream(stream)) {
+    throw new Error("Invalid stream type");
+  }
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
@@ -75,19 +82,27 @@ function withTimeout<T>(p: Promise<T>, timeoutMs?: number): Promise<T> {
 }
 
 function normalizeS3Error(e: unknown): { code?: number; message: string; name?: string } {
-  const any = e as { $metadata?: { httpStatusCode?: number }; message?: unknown; name?: unknown };
+  if (typeof e !== "object" || e === null) {
+    return { message: "S3 operation failed" };
+  }
+
+  const err = e as {
+    $metadata?: { httpStatusCode?: number };
+    message?: unknown;
+    name?: unknown;
+  };
 
   const code =
-    typeof any?.$metadata?.httpStatusCode === "number"
-      ? any.$metadata.httpStatusCode
+    typeof err.$metadata?.httpStatusCode === "number"
+      ? err.$metadata.httpStatusCode
       : undefined;
 
   const message =
-    typeof any?.message === "string" && any.message.trim()
-      ? any.message
+    typeof err.message === "string" && err.message.trim()
+      ? err.message
       : "S3 operation failed";
 
-  const name = typeof any?.name === "string" ? any.name : undefined;
+  const name = typeof err.name === "string" ? err.name : undefined;
 
   return { code, message, name };
 }

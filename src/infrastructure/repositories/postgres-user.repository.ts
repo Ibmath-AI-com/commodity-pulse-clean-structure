@@ -3,7 +3,22 @@ import type { Pool } from "pg";
 import type { IUserRepository } from "@/src/application/repositories/user.repository.interface";
 import type { SafeUser, User } from "@/src/entities/models/auth";
 
-function mapUser(row: any): User {
+type DbUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  is_admin: boolean;
+  status: User["status"];
+  must_change_password: boolean;
+  failed_login_count: number;
+  locked_until: Date | null;
+  last_login_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+function mapUser(row: DbUserRow): User {
   return {
     id: row.id,
     name: row.name,
@@ -24,7 +39,7 @@ export class PostgresUserRepository implements IUserRepository {
   constructor(private readonly pool: Pool) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    const res = await this.pool.query(
+    const res = await this.pool.query<DbUserRow>(
       `select * from app_user where email = $1 limit 1`,
       [email]
     );
@@ -32,7 +47,7 @@ export class PostgresUserRepository implements IUserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    const res = await this.pool.query(
+    const res = await this.pool.query<DbUserRow>(
       `select * from app_user where id = $1 limit 1`,
       [id]
     );
@@ -46,7 +61,7 @@ export class PostgresUserRepository implements IUserRepository {
     isAdmin: boolean;
     mustChangePassword: boolean;
   }): Promise<User> {
-    const res = await this.pool.query(
+    const res = await this.pool.query<DbUserRow>(
       `
       insert into app_user (name, email, password_hash, is_admin, must_change_password)
       values ($1, $2, $3, $4, $5)
