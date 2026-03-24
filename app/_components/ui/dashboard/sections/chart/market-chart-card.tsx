@@ -1,3 +1,4 @@
+// E:\AI Projects\commodity-pulse-clean-structure\app\_components\ui\dashboard\sections\chart\market-chart-card.tsx
 "use client";
 
 import type { ReactNode } from "react";

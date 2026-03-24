@@ -4,8 +4,9 @@ export type N8nWorkflowKey =
   | "report_generate"
   | "upload_list"
   | "rag_ingest"
-  | "prices_refresh";
+  | "prices_generate";
 
+  
 export type N8nCallOptions = {
   idempotencyKey?: string;
   timeoutMs?: number;

@@ -1,6 +1,6 @@
 // FILE: src/entities/models/dashboard.ts
 
-export type Status = "success" | "error" | "unknown";
+export type Status = "success" | "failed" | "running" | "pending";
 
 /* ===============================
    News / Events
@@ -61,8 +61,17 @@ export type DashboardPrediction = {
 };
 
 /* ===============================
-   Insights (UI-facing but derived
-   from entity layer data)
+   Chart
+================================ */
+
+export type DashboardChartPoint = {
+  date: string; // YYYY-MM-DD
+  actualPrice: number | null;
+  predictedPrice: number | null;
+};
+
+/* ===============================
+   Insights
 ================================ */
 
 export type Insight = {
@@ -93,18 +102,17 @@ export type DashboardKpis = {
 
   marketSignals: number;
   newSignalsToday: number;
-};
 
-// Add these types in: src/entities/models/dashboard.ts
+  forecastAccuracyPct30d: number | null;
+  matchedPointCount30d: number | null;
+  avgForecastErrorPct30d: number | null;
+};
 
 export type DashboardStatusFilter = "all" | "success" | "error";
 
 export type DashboardFiltersProps = {
   qText: string;
   onQTextChange: (v: string) => void;
-
-  statusFilter: DashboardStatusFilter;
-  onStatusFilterChange: (v: DashboardStatusFilter) => void;
 
   filteredCount: number;
   totalCount: number;
@@ -121,7 +129,9 @@ export type DashboardFiltersProps = {
 export type DashboardKpiRowProps = {
   activeForecasts: number;
   activeWowPct: number | null;
-  accuracyRatePct: number;
+  accuracyRatePct: number | null;
   marketSignals: number;
   newSignalsToday: number;
+  matchedPointCount30d: number | null;
+  avgForecastErrorPct: number | null;
 };

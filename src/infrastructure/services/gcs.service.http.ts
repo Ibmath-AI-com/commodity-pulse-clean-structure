@@ -94,6 +94,23 @@ function withTimeout<T>(p: Promise<T>, timeoutMs?: number): Promise<T> {
   });
 }
 
+function normalizeGcsError(e: unknown): { code?: number; message: string } {
+  const any = e as { code?: unknown; message?: unknown };
+  const code =
+    typeof any?.code === "number"
+      ? any.code
+      : typeof any?.code === "string"
+        ? Number(any.code)
+        : undefined;
+
+  const message =
+    typeof any?.message === "string" && any.message.trim()
+      ? any.message
+      : "GCS operation failed";
+
+  return { code: Number.isFinite(code) ? code : undefined, message };
+}
+
 export class HttpGcsService implements IGcsService {
   async listObjects(
     bucket: GcsBucketKey,
@@ -213,5 +230,64 @@ export class HttpGcsService implements IGcsService {
 
     const [url] = await withTimeout(task, opts?.timeoutMs);
     return { url, bucketName, objectName: params.objectName };
+  }
+
+  async deleteObject(
+    bucket: GcsBucketKey,
+    objectName: string,
+    opts?: (GcsCallOptions & { ignoreNotFound?: boolean })
+  ): Promise<void> {
+    const storage = getStorage();
+    const bucketName = resolveBucketName(bucket);
+    const file = storage.bucket(bucketName).file(objectName);
+
+    try {
+      await withTimeout(
+        file.delete({ ignoreNotFound: Boolean(opts?.ignoreNotFound) }),
+        opts?.timeoutMs
+      );
+    } catch (e) {
+      const { code, message } = normalizeGcsError(e);
+      // Some environments don't respect ignoreNotFound reliably; treat 404 as ok if requested.
+      if (opts?.ignoreNotFound && code === 404) return;
+      throw new Error(`GCS deleteObject failed: ${message}`);
+    }
+  }
+
+  async copyObject(
+    bucket: GcsBucketKey,
+    params: { sourceObjectName: string; destObjectName: string },
+    opts?: GcsCallOptions
+  ): Promise<void> {
+    const storage = getStorage();
+    const bucketName = resolveBucketName(bucket);
+
+    const src = storage.bucket(bucketName).file(params.sourceObjectName);
+    const dest = storage.bucket(bucketName).file(params.destObjectName);
+
+    try {
+      await withTimeout(src.copy(dest), opts?.timeoutMs);
+    } catch (e) {
+      const { message } = normalizeGcsError(e);
+      throw new Error(`GCS copyObject failed: ${message}`);
+    }
+  }
+
+  async moveObject(
+    bucket: GcsBucketKey,
+    params: { sourceObjectName: string; destObjectName: string },
+    opts?: (GcsCallOptions & { ignoreNotFound?: boolean })
+  ): Promise<void> {
+    // Implement as copy+delete to avoid cross-bucket constraints and keep semantics stable.
+    await this.copyObject(
+      bucket,
+      { sourceObjectName: params.sourceObjectName, destObjectName: params.destObjectName },
+      opts
+    );
+
+    await this.deleteObject(bucket, params.sourceObjectName, {
+      timeoutMs: opts?.timeoutMs,
+      ignoreNotFound: Boolean(opts?.ignoreNotFound),
+    });
   }
 }

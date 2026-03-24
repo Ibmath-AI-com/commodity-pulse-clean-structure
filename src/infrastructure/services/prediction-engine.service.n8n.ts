@@ -16,7 +16,7 @@ export class N8nPredictionEngineService implements IPredictionEngineService {
 
 async execute(input: PredictionExecuteInput): Promise<PredictionExecuteOutput> {
     const raw = await this.n8n.call<PredictionExecuteInput, unknown>("predict", input, {
-      timeoutMs: 60_000,
+      timeoutMs: 240_000,
       idempotencyKey: `predict:${input.uid}:${input.commodity}:${input.futureDate}:${(input.basisKeys ?? []).join(",")}:${(input.basisLabels ?? []).join(",")}`,
     });
 

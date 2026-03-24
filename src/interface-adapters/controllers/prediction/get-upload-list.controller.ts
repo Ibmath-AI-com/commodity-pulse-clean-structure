@@ -28,14 +28,11 @@ export const getUploadListController =
       { name: "getUploadList Controller", op: "http" },
       async () => {
         const cookieStore = await cookies();
-        const sessionCookie = cookieStore.get("session")?.value;
+        const sessionToken = await sessionService.getSessionToken(cookieStore);
 
-        if (!sessionCookie) {
+        if (!sessionToken) {
           throw new UnauthenticatedError("Must be logged in");
         }
-
-        await sessionService.validateSessionCookie({ sessionCookie });
-
         if (!input.commodity) {
           throw new Error("Missing commodity");
         }

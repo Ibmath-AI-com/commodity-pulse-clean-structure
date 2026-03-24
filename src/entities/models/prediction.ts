@@ -101,7 +101,7 @@ export type PredictionRecord = {
   // allow nulls if base price can be omitted
   basePrices: Array<number | null> | null;
 
-  status: "success" | "error" | "unknown";
+  status: "success" | "failed" | "running" | "pending";
   n8nHttpStatus: number | null;
 
   outputs: {

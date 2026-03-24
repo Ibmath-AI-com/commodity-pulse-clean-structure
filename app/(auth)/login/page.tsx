@@ -1,10 +1,10 @@
-//E:\AI Projects\commodity-clean-structure\app\(auth)\login\page.tsx
-'use client';
+// FILE: app/(auth)/login/page.tsx
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import LoginBackground from '@/app/_components/LoginBackground';
-import { logIn } from '../actions';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import LoginBackground from "@/app/_components/LoginBackground";
+import { logIn } from "../actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,21 +17,35 @@ export default function LoginPage() {
 
     const formData = new FormData(e.currentTarget);
 
+    setError(undefined);
     setLoading(true);
+
     const res = await logIn(formData);
-    if (res?.error) setError(res.error);
+
+    if (res?.error) {
+      setError(res.error);
+      setLoading(false);
+      return;
+    }
+
     setLoading(false);
   }
 
-function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
-  e.preventDefault();
-  router.push("/dashboard"); 
-}
+  function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    router.push("/");
+  }
 
   return (
     <div style={{ background: "transparent", minHeight: "100vh", position: "relative" }}>
       <LoginBackground />
-      <button type="button" onClick={handleHome} aria-label="Go to home" className="lp-home-btn">
+
+      <button
+        type="button"
+        onClick={handleHome}
+        aria-label="Go to home"
+        className="lp-home-btn"
+      >
         <svg
           className="lp-home-ico"
           viewBox="0 0 24 24"
@@ -48,7 +62,6 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
         Home
       </button>
 
-      
       <div className="login-container">
         <div className="login-card-wrapper">
           <div className="glow-border" />
@@ -58,11 +71,10 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
                 <h2 className="tt-login-companyRest">Commodity Pulse</h2>
               </div>
             </div>
-             {error && <p className="error">{error}</p>}
-            <form
-              className="form"
-               onSubmit={onSubmit} 
-            >
+
+            {error && <p className="error">{error}</p>}
+
+            <form className="form" onSubmit={onSubmit}>
               <div className="input-group">
                 <input
                   name="email"
@@ -72,7 +84,13 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
                   required
                   autoComplete="email"
                 />
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  className="input-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
@@ -86,16 +104,29 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
                   placeholder="Password"
                   required
                   minLength={6}
+                  autoComplete="current-password"
                 />
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  className="input-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
               </div>
 
-              <button type="submit" className="submit-btn">
-                <span>{loading ? 'Login in...' : 'Login in'}</span>
-                <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <button type="submit" className="submit-btn" disabled={loading}>
+                <span>{loading ? "Logging in..." : "Log in"}</span>
+                <svg
+                  className="arrow-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
@@ -109,7 +140,7 @@ function handleHome(e: React.MouseEvent<HTMLButtonElement>) {
           </div>
         </div>
 
-        <p className="footer">Powered by Commodity Pules</p>
+        <p className="footer">Powered by Commodity Pulse</p>
       </div>
     </div>
   );

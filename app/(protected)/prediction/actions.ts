@@ -1,4 +1,3 @@
-// FILE: app/(protected)/prediction/actions.ts
 "use server";
 
 import { redirect } from "next/navigation";
@@ -11,6 +10,7 @@ export async function runPredictionAction(input: {
   basisLabels: string[];
   basePrices: number[];
   region?: string;
+  forceRun?: boolean;
 }) {
   const { getInjection } = await import("@/di/container");
 
@@ -28,6 +28,7 @@ export async function runPredictionAction(input: {
           basisLabels: input.basisLabels,
           basePrices: input.basePrices,
           region: input.region ?? "global",
+          forceRun: input.forceRun ?? false,
         });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {

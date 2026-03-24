@@ -1,15 +1,31 @@
-// src/interface-adapters/controllers/auth/login.controller.ts
 import { z } from "zod";
 import { InputParseError, AuthenticationError } from "@/src/entities/errors/auth";
 import type { IInstrumentationService } from "@/src/application/services/instrumentation.service.interface";
 import type { ILoginUseCase } from "@/src/application/use-cases/auth/login.use-case";
+import type { ISessionService } from "@/src/application/services/session.service.interface";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  ipAddress: z.string().optional().nullable(),
+  userAgent: z.string().optional().nullable(),
 });
 
-export type ILoginController = (input: unknown) => Promise<{ uid: string }>;
+export type LoginControllerResult = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    isAdmin: boolean;
+    status: "active" | "disabled";
+    mustChangePassword: boolean;
+    lastLoginAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+};
+
+export type ILoginController = (input: unknown) => Promise<LoginControllerResult>;
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -28,7 +44,11 @@ function errorMessage(err: unknown): string {
 }
 
 export const loginController =
-  (instrumentation: IInstrumentationService, login: ILoginUseCase): ILoginController =>
+  (
+    instrumentation: IInstrumentationService,
+    login: ILoginUseCase,
+    sessionService: ISessionService
+  ): ILoginController =>
   async (input) =>
     instrumentation.startSpan({ name: "loginController", op: "function" }, async () => {
       const parsed = schema.safeParse(input);
@@ -37,7 +57,17 @@ export const loginController =
       }
 
       try {
-        return await login(parsed.data);
+        const result = await login(parsed.data);
+
+        await sessionService.createSessionCookie({
+          sessionToken: result.sessionToken,
+          refreshToken: result.refreshToken,
+          expiresAt: result.expiresAt,
+        });
+
+        return {
+          user: result.user,
+        };
       } catch (err: unknown) {
         throw new AuthenticationError(errorMessage(err), { cause: err });
       }

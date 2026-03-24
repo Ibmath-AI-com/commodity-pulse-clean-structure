@@ -1,0 +1,4 @@
+[35msrc/interface-adapters/controllers/dashboard/get-dashboard.controller.ts[m[36m:[m[32m58[m[36m:[m        const { uid } = await sessionService.[1;31mvalidateSessionCookie[m({
+[35msrc/interface-adapters/controllers/prediction/execute-prediction.controller.ts[m[36m:[m[32m42[m[36m:[m      const { uid } = await sessionService.[1;31mvalidateSessionCookie[m({ sessionCookie });
+[35msrc/interface-adapters/controllers/prediction/generate-report.controller.ts[m[36m:[m[32m36[m[36m:[m        await sessionService.[1;31mvalidateSessionCookie[m({ sessionCookie });
+[35msrc/interface-adapters/controllers/prediction/get-upload-list.controller.ts[m[36m:[m[32m37[m[36m:[m        await sessionService.[1;31mvalidateSessionCookie[m({ sessionCookie });

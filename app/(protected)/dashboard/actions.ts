@@ -1,4 +1,4 @@
-//E:\AI Projects\commodity-clean-structure\app\(protected)\dashboard\actions.ts
+// FILE: app/(protected)/dashboard/actions.ts
 "use server";
 
 import { redirect } from "next/navigation";
@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { getInjection } from "@/di/container";
 import { AuthenticationError, UnauthenticatedError } from "@/src/entities/errors/auth";
 
-export async function getDashboardAction() {
+export async function getDashboardAction(input?: { commodity?: string }) {
   const instrumentation = getInjection("IInstrumentationService");
 
   return instrumentation.startSpan(
@@ -14,7 +14,7 @@ export async function getDashboardAction() {
     async () => {
       try {
         const controller = getInjection("IGetDashboardController");
-        return await controller();
+        return await controller(input);
       } catch (err) {
         console.error("GET_DASHBOARD_FAILED", err);
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
@@ -28,7 +28,7 @@ export async function getDashboardAction() {
   );
 }
 
-export async function refreshDashboardAction() {
+export async function refreshDashboardAction(input?: { commodity?: string }) {
   const instrumentation = getInjection("IInstrumentationService");
 
   return instrumentation.startSpan(
@@ -36,7 +36,7 @@ export async function refreshDashboardAction() {
     async () => {
       try {
         const controller = getInjection("IGetDashboardController");
-        return await controller();
+        return await controller(input);
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
           redirect("/sign-in");
@@ -49,7 +49,6 @@ export async function refreshDashboardAction() {
     }
   );
 }
-
 
 export async function logoutAction() {
   const instrumentation = getInjection("IInstrumentationService");

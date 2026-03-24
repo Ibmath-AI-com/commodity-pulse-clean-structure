@@ -172,7 +172,7 @@ header {
 .tt-nav {
   display: flex;
   gap: 30px;
-  padding: 14px 24px;
+  padding: 1px;
   background: #ffffff;
   border-bottom: 1px solid var(--tt-border);
   font-weight: 600;
@@ -745,6 +745,7 @@ html,
 body {
   font-family: var(--font-Inter);
   scroll-behavior: smooth;
+  margin: 0;
 }
 
 /* Custom Scrollbar */

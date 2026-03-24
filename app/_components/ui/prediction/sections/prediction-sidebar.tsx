@@ -3,7 +3,8 @@
 import * as React from "react";
 
 import { cx } from "@/lib/prediction/utils";
-import { BASES, COMMODITIES } from "@/lib/prediction/options";
+import { BASES } from "@/lib/common/options";
+import { CommoditySelect } from "../../commodity-dropdown";
 
 type BaseOption = { value: string; label: string };
 
@@ -51,20 +52,11 @@ export function PredictionSidebar(props: {
       <div className="cp-sidebar-section">
         <h3>Forecast Parameters</h3>
 
-        <div className="cp-form-group">
-          <label>Commodity</label>
-          <select
-            value={commodity}
-            onChange={(e) => handleCommodityChange(e.target.value)}
-            disabled={status === "loading"}
-          >
-            {COMMODITIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CommoditySelect
+          value={commodity}
+          onChange={handleCommodityChange}
+          disabled={status === "loading"}
+        />
 
         <div className="cp-form-group">
           <label>Future Date</label>
