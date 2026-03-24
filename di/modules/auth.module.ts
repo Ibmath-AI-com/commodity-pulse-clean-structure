@@ -22,6 +22,10 @@ import { logoutController } from "@/src/interface-adapters/controllers/auth/logo
 export function createAuthModule() {
   const m = createModule();
 
+  // -----------------------
+  // Repositories
+  // -----------------------
+  m.bind(DI_SYMBOLS.IPostgresPool).toValue(postgres);
   m.bind(DI_SYMBOLS.IInstrumentationService).toClass(NoopInstrumentationService);
   m.bind(DI_SYMBOLS.ICrashReporterService).toClass(NoopCrashReporterService);
 

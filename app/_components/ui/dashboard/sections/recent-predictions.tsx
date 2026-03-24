@@ -1,7 +1,7 @@
 // FILE: app/_components/ui/dashboard/sections/recent-predictions.tsx
 "use client";
 
-import { cx, fmtDate, safeUpper } from "@/lib/dashboard/utils";
+import { cx, fmtDate, safeUpper } from "@/app/_components/utils";
 import type { DashboardPrediction } from "@/src/entities/models/dashboard";
 
 function trendTone(r: DashboardPrediction) {

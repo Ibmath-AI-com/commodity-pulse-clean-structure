@@ -3,7 +3,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { CommoditySelect } from "../../commodity-dropdown";
-import { cx } from "@/lib/dashboard/utils";
+import { cx } from "@/app/_components/utils";
 import type { DashboardFiltersProps } from "@/src/entities/models/dashboard";
 
 type CpFiltersAsideProps = DashboardFiltersProps & {

@@ -2,7 +2,7 @@
 "use client";
 
 import { Info } from "lucide-react";
-import { cx } from "@/lib/dashboard/utils";
+import { cx } from "@/app/_components/utils";
 import type { DashboardKpiRowProps } from "@/src/entities/models/dashboard";
 
 export function CpKpiRow(props: DashboardKpiRowProps) {

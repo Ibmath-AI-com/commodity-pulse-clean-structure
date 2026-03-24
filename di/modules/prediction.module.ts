@@ -13,7 +13,6 @@ import type { IN8nService } from "@/src/application/services/n8n.service.interfa
 import type { IObjectStorageService } from "@/src/application/services/storage.service.interface";
 import { S3StorageService } from "@/src/infrastructure/services/s3.service";
 
-//import { FirestorePredictionsRepository } from "@/src/infrastructure/repositories/predictions.repository.firestore";
 import { PostgresPredictionsRepository } from "@/src/infrastructure/repositories/postgres-predictions.repository";
 
 import { executePredictionUseCase } from "@/src/application/use-cases/prediction/execute-prediction.use-case";

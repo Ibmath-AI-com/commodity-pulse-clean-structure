@@ -29,7 +29,7 @@ import { BASES, normalizeCommodity } from "@/lib/common/options";
 import { toNumberLoose } from "@/lib/prediction/normalize";
 import { mapPayloadToResult } from "@/lib/prediction/mappers";
 import { LS_COMMODITY, clearPredictionStorage } from "@/lib/prediction/storage";
-import { cx } from "@/lib/prediction/utils";
+import { cx } from "@/app/_components/utils";
 
 import { RiskAnalysisPanel } from "./sections/risk-analysis";
 import { DetailedBidAnalysis } from "./sections/detailed-bid-analysis";

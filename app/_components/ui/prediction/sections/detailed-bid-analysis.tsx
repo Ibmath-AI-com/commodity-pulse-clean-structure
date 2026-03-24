@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Info, FileText, XCircle } from "lucide-react";
 
-import { cx } from "@/lib/prediction/utils";
+import { cx } from "@/app/_components/utils";
 import { AssessmentLegendTooltip } from "../tooltip/implication-legend";
 
 import type {

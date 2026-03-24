@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { cx } from "@/lib/prediction/utils";
+import { cx } from "@/app/_components/utils";
 import { BASES } from "@/lib/common/options";
 import { CommoditySelect } from "../../commodity-dropdown";
 

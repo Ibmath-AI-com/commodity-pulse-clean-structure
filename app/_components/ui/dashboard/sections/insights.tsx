@@ -3,7 +3,7 @@
 
 import { ChevronDown } from "lucide-react";
 
-import { cx } from "@/lib/dashboard/utils";
+import { cx } from "@/app/_components/utils";
 import type { Insight } from "@/src/entities/models/dashboard";
 
 export function CpInsightsCard({ items }: { items: Insight[] }) {
