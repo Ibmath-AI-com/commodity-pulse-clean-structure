@@ -27,18 +27,126 @@ export type ReportViewModel = {
   hasStructure: boolean;
 };
 
-function tryParseJson(v: unknown): any {
-  if (v == null) return null;
-  if (typeof v === "object") return v;
-  if (typeof v !== "string") return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-  const s = v.trim();
+function tryParseJson(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return null;
+
+  const s = value.trim();
   if (!s) return null;
 
   try {
     return JSON.parse(s);
   } catch {
     return null;
+  }
+}
+
+function asTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const s = value.trim();
+    if (!s) return null;
+
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  return null;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((x) => String(x));
+}
+
+function mapSummarySections(value: unknown): SummarySection[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item): SummarySection => {
+      const obj = isRecord(item) ? item : {};
+      return {
+        sectionTitle: asTrimmedString(obj.section_title ?? obj.title),
+        content: asTrimmedString(obj.content ?? obj.text),
+      };
+    })
+    .filter((section) => Boolean(section.sectionTitle || section.content));
+}
+
+function mapReportNumbers(value: unknown): ReportNumber[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((item): ReportNumber => {
+    const obj = isRecord(item) ? item : {};
+    return {
+      value: String(obj.value ?? ""),
+      unit: String(obj.unit ?? ""),
+      context: String(obj.context ?? ""),
+    };
+  });
+}
+
+function mapReportEvents(value: unknown): ReportEvent[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((item): ReportEvent => {
+    const obj = isRecord(item) ? item : {};
+
+    return {
+      headline: asTrimmedString(obj.headline),
+      eventType: asTrimmedString(obj.event_type),
+      impactDirection: asTrimmedString(obj.impact_direction),
+      eventDate: asTrimmedString(obj.event_date),
+      importanceScore: asNullableNumber(obj.importance_score),
+      evidenceSummary: asTrimmedString(obj.evidence_summary ?? obj.summary),
+      regions: asStringArray(obj.regions),
+      numbers: mapReportNumbers(obj.numbers),
+    };
+  });
+}
+
+function extractEventsFromMessageLike(value: unknown): unknown {
+  if (!isRecord(value)) return undefined;
+  if (Array.isArray(value.events)) return value.events;
+
+  const nestedMessage = tryParseJson(value.message) ?? value.message;
+  if (isRecord(nestedMessage) && Array.isArray(nestedMessage.events)) {
+    return nestedMessage.events;
+  }
+
+  return undefined;
+}
+
+function applyNormalized(
+  out: ReportViewModel,
+  value: unknown
+): void {
+  if (!isRecord(value)) return;
+
+  if (typeof value.main_theme === "string" && value.main_theme.trim()) {
+    out.mainTheme = value.main_theme.trim();
+  }
+
+  const summary = mapSummarySections(value.document_summary);
+  if (summary.length) {
+    out.documentSummary = summary;
+  }
+
+  const events = mapReportEvents(value.events);
+  if (events.length) {
+    out.events = events;
   }
 }
 
@@ -50,119 +158,69 @@ export function normalizeReportToViewModel(raw: unknown): ReportViewModel {
     hasStructure: false,
   };
 
-  const applyNormalized = (obj: any) => {
-    if (!obj || typeof obj !== "object") return;
-
-    if (typeof obj.main_theme === "string") {
-      out.mainTheme = obj.main_theme.trim();
-    }
-
-    if (Array.isArray(obj.document_summary)) {
-      out.documentSummary = obj.document_summary
-        .map((s: any) => ({
-          sectionTitle: String(s?.section_title ?? s?.title ?? "").trim(),
-          content: String(s?.content ?? s?.text ?? "").trim(),
-        }))
-        .filter((s: SummarySection) => Boolean(s.sectionTitle || s.content));
-    }
-
-    if (Array.isArray(obj.events)) {
-      out.events = obj.events.map((e: any): ReportEvent => ({
-        headline: String(e?.headline ?? "").trim(),
-        eventType: String(e?.event_type ?? "").trim(),
-        impactDirection: String(e?.impact_direction ?? "").trim(),
-        eventDate: String(e?.event_date ?? "").trim(),
-        importanceScore:
-          typeof e?.importance_score === "number"
-            ? e.importance_score
-            : typeof e?.importance_score === "string" && e.importance_score.trim() !== ""
-            ? Number(e.importance_score)
-            : null,
-        evidenceSummary: String(e?.evidence_summary ?? e?.summary ?? "").trim(),
-        regions: Array.isArray(e?.regions) ? e.regions.map((x: any) => String(x)) : [],
-        numbers: Array.isArray(e?.numbers)
-          ? e.numbers.map((n: any) => ({
-              value: String(n?.value ?? ""),
-              unit: String(n?.unit ?? ""),
-              context: String(n?.context ?? ""),
-            }))
-          : [],
-      }));
-    }
-  };
-
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    if (Array.isArray((raw as any).json) && (raw as any).json.length) {
-      applyNormalized((raw as any).json[0]);
+  if (isRecord(raw)) {
+    const jsonValue = raw.json;
+    if (Array.isArray(jsonValue) && jsonValue.length > 0) {
+      applyNormalized(out, jsonValue[0]);
     } else {
-      applyNormalized(raw);
+      applyNormalized(out, raw);
     }
   }
 
-  if (!out.mainTheme && !out.documentSummary.length && !out.events.length && Array.isArray(raw) && raw.length) {
-    const first = raw[0] as any;
-    if (first && typeof first === "object") {
-      applyNormalized(first);
-    }
+  if (!out.mainTheme && !out.documentSummary.length && !out.events.length && Array.isArray(raw) && raw.length > 0) {
+    applyNormalized(out, raw[0]);
   }
 
   if (!out.mainTheme && !out.documentSummary.length && !out.events.length) {
-    let root: any = raw;
-    if (Array.isArray(root) && root.length) root = root[0];
+    let root: unknown = raw;
 
-    const steps = Array.isArray(root?.data) ? root.data : null;
-    if (steps) {
-      for (const step of steps) {
-        const rawOut = step?.output;
-        const obj1 = tryParseJson(rawOut) ?? rawOut;
-        if (!obj1 || typeof obj1 !== "object") continue;
+    if (Array.isArray(root) && root.length > 0) {
+      root = root[0];
+    }
+
+    if (isRecord(root) && Array.isArray(root.data)) {
+      for (const step of root.data) {
+        if (!isRecord(step)) continue;
+
+        const rawOutput = step.output;
+        const obj1 = tryParseJson(rawOutput) ?? rawOutput;
+        if (!isRecord(obj1)) continue;
 
         if (typeof obj1.main_theme === "string" && obj1.main_theme.trim()) {
           out.mainTheme = obj1.main_theme.trim();
         }
 
-        const msg = obj1.message;
-        const msgParsed1 = tryParseJson(msg) ?? msg;
+        const rawMessage = obj1.message;
+        const msgParsed1 = tryParseJson(rawMessage) ?? rawMessage;
         const msgParsed2 = tryParseJson(msgParsed1) ?? msgParsed1;
 
-        const ds = obj1.document_summary ?? msgParsed2?.document_summary ?? msgParsed1?.document_summary;
-        if (Array.isArray(ds) && ds.length) {
-          out.documentSummary = ds
-            .map((s: any) => ({
-              sectionTitle: String(s?.section_title ?? s?.title ?? "").trim(),
-              content: String(s?.content ?? s?.text ?? "").trim(),
-            }))
-            .filter((s: SummarySection) => Boolean(s.sectionTitle || s.content));
+        const summarySource =
+          obj1.document_summary ??
+          (isRecord(msgParsed2) ? msgParsed2.document_summary : undefined) ??
+          (isRecord(msgParsed1) ? msgParsed1.document_summary : undefined);
+
+        const summary = mapSummarySections(summarySource);
+        if (summary.length) {
+          out.documentSummary = summary;
         }
 
-        const ev = obj1.events ?? obj1?.message?.events ?? msgParsed2?.events;
-        if (Array.isArray(ev) && ev.length) {
-          out.events = ev.map((e: any): ReportEvent => ({
-            headline: String(e?.headline ?? "").trim(),
-            eventType: String(e?.event_type ?? "").trim(),
-            impactDirection: String(e?.impact_direction ?? "").trim(),
-            eventDate: String(e?.event_date ?? "").trim(),
-            importanceScore:
-              typeof e?.importance_score === "number"
-                ? e.importance_score
-                : typeof e?.importance_score === "string" && e.importance_score.trim() !== ""
-                ? Number(e.importance_score)
-                : null,
-            evidenceSummary: String(e?.evidence_summary ?? e?.summary ?? "").trim(),
-            regions: Array.isArray(e?.regions) ? e.regions.map((x: any) => String(x)) : [],
-            numbers: Array.isArray(e?.numbers)
-              ? e.numbers.map((n: any) => ({
-                  value: String(n?.value ?? ""),
-                  unit: String(n?.unit ?? ""),
-                  context: String(n?.context ?? ""),
-                }))
-              : [],
-          }));
+        const eventsSource =
+          obj1.events ??
+          extractEventsFromMessageLike(obj1.message) ??
+          (isRecord(msgParsed2) ? msgParsed2.events : undefined);
+
+        const events = mapReportEvents(eventsSource);
+        if (events.length) {
+          out.events = events;
         }
       }
     }
   }
 
-  out.hasStructure = Boolean(out.mainTheme) || out.documentSummary.length > 0 || out.events.length > 0;
+  out.hasStructure =
+    Boolean(out.mainTheme) ||
+    out.documentSummary.length > 0 ||
+    out.events.length > 0;
+
   return out;
 }
