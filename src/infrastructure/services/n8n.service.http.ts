@@ -18,7 +18,7 @@ function resolveWebhookUrl(cfg: ReturnType<typeof requireN8nConfig>, workflow: N
   switch (workflow) {
     case "report_generate":
       return cfg.webhooks.generatingReportUrl;
-    case "prices_refresh":
+    case "prices_generate":
       return cfg.webhooks.generatingPricesUrl;
     case "predict":
       return cfg.webhooks.forecastingUrl;
@@ -47,7 +47,7 @@ export class HttpN8nService implements IN8nService {
     const u = new URL(url);
     u.searchParams.set("token", cfg.token);
 
-    const timeoutMs = opts?.timeoutMs ?? 60_000;
+    const timeoutMs = opts?.timeoutMs ?? 240_000;
     const t = withTimeout(timeoutMs);
 
     try {

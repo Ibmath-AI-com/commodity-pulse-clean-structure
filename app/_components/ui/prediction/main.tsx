@@ -1,7 +1,6 @@
-// FILE: app/_components/ui/prediction/main.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/app/_components/app-shell";
 import { runPredictionAction } from "@/app/(protected)/prediction/actions";
@@ -24,15 +23,20 @@ import type {
 } from "./types/types";
 
 import type { PredictionBundle } from "@/src/entities/models/prediction";
+import type { PredictionReadinessResult } from "@/src/entities/models/document-generation-status";
 
-// UI helpers
-import { BASES, normalizeCommodity } from "@/lib/prediction/options";
+import { BASES, normalizeCommodity } from "@/lib/common/options";
 import { toNumberLoose } from "@/lib/prediction/normalize";
 import { mapPayloadToResult } from "@/lib/prediction/mappers";
-import { LS_COMMODITY, clearPredictionStorage } from "@/lib/prediction/storage";
-import { cx } from "@/lib/prediction/utils";
+import { clearPredictionStorage } from "@/lib/prediction/storage";
+import { cx } from "@/app/_components/utils";
+import {
+  DEFAULT_COMMODITY,
+  getStoredCommodity,
+  setStoredCommodity,
+  subscribeStoredCommodity,
+} from "@/lib/common/commodity-preference";
 
-// UI sections
 import { RiskAnalysisPanel } from "./sections/risk-analysis";
 import { DetailedBidAnalysis } from "./sections/detailed-bid-analysis";
 import { PredictionSidebar } from "./sections/prediction-sidebar";
@@ -82,7 +86,20 @@ function normalizeBasisKeyForApi(k: string) {
 
 type JustTab = "drivers" | "risk" | "evidence" | "cali";
 
-type RunPredictionActionOut = { bundle: PredictionBundle };
+type RunPredictionActionOut =
+  | {
+      type: "blocked";
+      message: string;
+    }
+  | {
+      type: "confirmation_required";
+      message: string;
+      status: PredictionReadinessResult;
+    }
+  | {
+      type: "success";
+      bundle: PredictionBundle;
+    };
 
 function toRiskPayload(v: unknown): RiskPayload {
   if (!isRecord(v)) return { items: [] };
@@ -118,7 +135,9 @@ export default function PredictionMain() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const [commodity, setCommodity] = useState<string>("sulphur");
+  const [commodity, setCommodity] = useState<string>(() =>
+    typeof window === "undefined" ? DEFAULT_COMMODITY : getStoredCommodity()
+  );
   const [futureDate, setFutureDate] = useState<string>("");
 
   const [basis, setBasis] = useState<string[]>(["middle-east"]);
@@ -129,6 +148,16 @@ export default function PredictionMain() {
   const [justTab, setJustTab] = useState<JustTab>("cali");
   const [legendOpen, setLegendOpen] = useState(false);
 
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    message: string;
+    status: PredictionReadinessResult | null;
+  }>({
+    open: false,
+    message: "",
+    status: null,
+  });
+
   const MAX_BASIS = 2;
 
   const [runTl, setRunTl] = useState<RunTimelineState>({
@@ -136,6 +165,9 @@ export default function PredictionMain() {
     steps: { report: "pending", forecast: "pending", refresh: "pending" },
     message: "",
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => subscribeStoredCommodity((value) => setCommodity(value)), []);
 
   function tlReset(msg?: string) {
     setRunTl({
@@ -158,6 +190,11 @@ export default function PredictionMain() {
     window.setTimeout(() => {
       setRunTl((prev) => ({ ...prev, visible: false, message: "" }));
     }, ms);
+  }
+
+  function handlePrint() {
+    if (status !== "success") return;
+    window.print();
   }
 
   const runBusy =
@@ -193,10 +230,7 @@ export default function PredictionMain() {
     resetPredictionScreenState();
 
     setCommodity(next);
-    try {
-      window.localStorage.setItem(LS_COMMODITY, next.toLowerCase());
-      window.dispatchEvent(new Event("ai:commodity"));
-    } catch {}
+    setStoredCommodity(next);
   }
 
   const selectedBases = useMemo(() => {
@@ -216,6 +250,28 @@ export default function PredictionMain() {
       status !== "loading"
   );
 
+  async function executePrediction(forceRun: boolean) {
+    const basisKeys = (basis ?? []).filter(Boolean).slice(0, MAX_BASIS);
+    const basisLabels = basisKeys.map((k) => BASES.find((b) => b.value === k)?.label ?? k);
+    const selectedBasePrices = basisKeys.map((b) => toNumberLoose(basePricesByBasis?.[b] ?? ""));
+
+    if (selectedBasePrices.some((x) => x == null)) {
+      throw new Error("Missing base price for one or more selected bases.");
+    }
+
+    const basisKeysNormalized = basisKeys.map(normalizeBasisKeyForApi);
+
+    return (await runPredictionAction({
+      commodity: commodity.trim().toLowerCase(),
+      futureDate,
+      basisKeys: basisKeysNormalized,
+      basisLabels,
+      basePrices: selectedBasePrices as number[],
+      region: "global",
+      forceRun,
+    })) as RunPredictionActionOut;
+  }
+
   async function runPrediction() {
     if (!canRun || runBusy) return;
 
@@ -225,42 +281,35 @@ export default function PredictionMain() {
     setJustTab("cali");
 
     tlReset();
-    tlStep("report", "running", "Checking AI signals…");
+    tlStep("report", "running", "Checking documents…");
 
     try {
-      const basisKeys = (basis ?? []).filter(Boolean).slice(0, MAX_BASIS);
-      const basisLabels = basisKeys.map((k) => BASES.find((b) => b.value === k)?.label ?? k);
-      const selectedBasePrices = basisKeys.map((b) => toNumberLoose(basePricesByBasis?.[b] ?? ""));
+      const out = await executePrediction(false);
 
-      if (selectedBasePrices.some((x) => x == null)) {
-        throw new Error("Missing base price for one or more selected bases.");
+      if (out.type === "blocked") {
+        tlStep("forecast", "error", out.message);
+        setStatus("error");
+        setError(out.message);
+        return;
       }
 
-      tlStep("forecast", "running", "Running forecast…");
-
-      const basisKeysNormalized = basisKeys.map(normalizeBasisKeyForApi);
-
-      const out: unknown = await runPredictionAction({
-        commodity: commodity.trim().toLowerCase(),
-        futureDate,
-        basisKeys: basisKeysNormalized,
-        basisLabels,
-        basePrices: selectedBasePrices as number[],
-        region: "global",
-      });
-
-      if (!isRecord(out) || !("bundle" in out)) {
-        throw new Error("Invalid API response: missing bundle");
+      if (out.type === "confirmation_required") {
+        tlStep("forecast", "pending", "User confirmation required.");
+        setStatus("idle");
+        setConfirmState({
+          open: true,
+          message: out.message,
+          status: out.status,
+        });
+        return;
       }
 
-      const nextBundle = (out as RunPredictionActionOut).bundle;
-
-      tlStep("report", "done", "Signals ready.");
+      tlStep("report", "done", "Documents ready.");
       tlStep("forecast", "done", "Forecast complete.");
       tlStep("refresh", "done", "Done.");
       tlHideSoon();
 
-      setBundle(nextBundle);
+      setBundle(out.bundle);
       setStatus("success");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Forecast failed";
@@ -270,7 +319,45 @@ export default function PredictionMain() {
     }
   }
 
-  // Derived UI data
+  async function continueWithoutPendingDocs() {
+    setConfirmState({ open: false, message: "", status: null });
+    setStatus("loading");
+    setError(null);
+    tlReset();
+    tlStep("forecast", "running", "Running forecast with ready documents only…");
+
+    try {
+      const out = await executePrediction(true);
+
+      if (out.type === "blocked") {
+        tlStep("forecast", "error", out.message);
+        setStatus("error");
+        setError(out.message);
+        return;
+      }
+
+      if (out.type === "confirmation_required") {
+        tlStep("forecast", "error", out.message);
+        setStatus("error");
+        setError(out.message);
+        return;
+      }
+
+      tlStep("report", "done", "Documents checked.");
+      tlStep("forecast", "done", "Forecast complete.");
+      tlStep("refresh", "done", "Done.");
+      tlHideSoon();
+
+      setBundle(out.bundle);
+      setStatus("success");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Forecast failed";
+      tlStep("forecast", "error", msg);
+      setStatus("error");
+      setError(msg);
+    }
+  }
+
   const result = useMemo(() => (bundle ? mapPayloadToResult(bundle) : null), [bundle]);
 
   const tenderUnit = result?.currency ? String(result.currency) : "USD/t";
@@ -464,15 +551,20 @@ export default function PredictionMain() {
     });
   }, [bundle, rawEvidenceEvents]);
 
-  function handlePrint() {
-    if (status !== "success") return;
-    window.print();
-  }
 
   return (
-    <AppShell title="Prediction">
+    <AppShell title="Prediction" onOpenMobileSidebar={() => setSidebarOpen(true)}>
       <div className="cp-root">
-        <div className="cp-container">
+        <div className="cp-container cp-mobile-layout">
+          {sidebarOpen ? (
+            <button
+              type="button"
+              className="cp-mobile-sidebar-backdrop"
+              aria-label="Close prediction sidebar"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           <PredictionSidebar
             commodity={commodity}
             futureDate={futureDate}
@@ -488,60 +580,12 @@ export default function PredictionMain() {
             setBasePriceText={setBasePriceText}
             toggleBasis={toggleBasis}
             runPrediction={runPrediction}
+            runTl={runTl}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
           />
 
           <main className="cp-main">
-            <div className="cp-card cp-rec-card">
-              <div className="cp-rec-header">
-                <div className="cp-rec-text">
-                  <h2>
-                    <ArrowRight size={14} className="th-inline" /> Recommended Action:
-                    <strong>
-                      {bundle?.tender?.tenderAction ? String(bundle.tender.tenderAction) : "—"} at{" "}
-                      {optimalRow?.caliBidRangeFob
-                        ? String(optimalRow.caliBidRangeFob).replace(/\s*-\s*/g, "–")
-                        : "—"}{" "}
-                      {tenderUnit}
-                      {" - "}
-                      {selectedBases?.[0]?.label ?? "—"}
-                    </strong>
-                  </h2>
-
-                  <p>
-                    <strong>Rationale:</strong>{" "}
-                    {optimalRow ? (
-                      <>
-                        {getRowString(optimalRow, "chanceToWin") ?? "—"} win probability + balanced margin (
-                        {getRowString(optimalRow, "marginPerTon") ?? "—"})
-                      </>
-                    ) : bundle?.tender?.rationale ? (
-                      String(bundle.tender.rationale)
-                    ) : (
-                      "Run a forecast to generate rationale."
-                    )}
-                  </p>
-                </div>
-
-                <div className="cp-rec-card">
-                  <RunTimeline state={runTl} cx={cx} />
-                </div>
-
-                <div className="cp-actions">
-                  <button className="cp-btn-outline" type="button" disabled={status !== "success"}>
-                    <Download size={14} /> EXPORT
-                  </button>
-
-                  <button className="cp-btn-outline" type="button" onClick={handlePrint} disabled={status !== "success"}>
-                    <Printer size={14} /> PRINT
-                  </button>
-
-                  <button className="cp-btn-outline" type="button" disabled>
-                    <Share2 size={14} /> SHARE
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <div className="dashboard-grid">
               <ForecastResultsCard
                 bundle={bundle}
@@ -551,6 +595,8 @@ export default function PredictionMain() {
                 sentimentScore={sentimentScore}
                 direction={direction}
                 strength={strength}
+                canPrint={status === "success"}
+                onPrint={handlePrint}
               />
               <RiskAnalysisPanel risk={riskPayload} />
             </div>
@@ -568,6 +614,34 @@ export default function PredictionMain() {
             />
           </main>
         </div>
+
+        {confirmState.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-slate-900">Documents not fully ready</h3>
+              <p className="mt-2 text-sm text-slate-600">{confirmState.message}</p>
+
+             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <div>Ready: {confirmState.status?.readyDocuments.length ?? 0}</div>
+                <div>Running: {confirmState.status?.runningDocuments.length ?? 0}</div>
+              </div>
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  className="secondaryBtn"
+                  onClick={() => setConfirmState({ open: false, message: "", status: null })}
+                >
+                  Wait
+                </button>
+
+                <button type="button" className="primaryBtn" onClick={continueWithoutPendingDocs}>
+                  Continue without unavailable files
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );

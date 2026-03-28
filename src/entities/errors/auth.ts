@@ -16,6 +16,13 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class UserDisabledError extends Error {
+  constructor(message = "User is disabled") {
+    super(message);
+    this.name = "UserDisabledError";
+  }
+}
+
 export class InputParseError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);

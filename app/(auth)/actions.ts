@@ -1,8 +1,7 @@
-//E:\AI Projects\commodity-clean-structure\app\(auth)\actions.ts
+// FILE: app/(auth)/actions.ts
 "use server";
 
 import { redirect } from "next/navigation";
-
 
 import { InputParseError } from "@/src/entities/errors/common";
 import { AuthenticationError } from "@/src/entities/errors/auth";
@@ -25,12 +24,13 @@ export async function logIn(formData: FormData) {
         if (err instanceof InputParseError || err instanceof AuthenticationError) {
           return { error: "Invalid email or password" };
         }
+
         const crashReporterService = getInjection("ICrashReporterService");
         crashReporterService.report(err);
         return { error: "Internal error. Please try again later." };
       }
 
-      redirect("/dashboard"); 
+      redirect("/dashboard");
     }
   );
 }

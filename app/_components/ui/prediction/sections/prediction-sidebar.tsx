@@ -1,9 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { X } from "lucide-react";
 
-import { cx } from "@/lib/prediction/utils";
-import { BASES, COMMODITIES } from "@/lib/prediction/options";
+import { cx } from "@/app/_components/utils";
+import { BASES } from "@/lib/common/options";
+import { CommoditySelect } from "../../commodity-dropdown";
+import { RunTimeline } from "./run-timeline";
+import type { RunTimelineState } from "../types/types";
 
 type BaseOption = { value: string; label: string };
 
@@ -28,6 +32,9 @@ export function PredictionSidebar(props: {
   toggleBasis: (v: string) => void;
 
   runPrediction: () => void;
+  runTl: RunTimelineState;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }) {
   const {
     commodity,
@@ -44,27 +51,30 @@ export function PredictionSidebar(props: {
     setBasePriceText,
     toggleBasis,
     runPrediction,
+    runTl,
+    mobileOpen = false,
+    onCloseMobile,
   } = props;
 
-  return (
-    <aside className="cp-sidebar">
-      <div className="cp-sidebar-section">
-        <h3>Forecast Parameters</h3>
+  const [basisOpen, setBasisOpen] = React.useState(false);
 
-        <div className="cp-form-group">
-          <label>Commodity</label>
-          <select
-            value={commodity}
-            onChange={(e) => handleCommodityChange(e.target.value)}
-            disabled={status === "loading"}
-          >
-            {COMMODITIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+  return (
+    <aside className={cx("cp-sidebar", "cp-mobile-sidebar", mobileOpen && "cp-mobile-sidebar-open")}>
+      <div className="cp-sidebar-section">
+        <div className="cp-mobile-sidebar-close">
+          <button className="cp-btn-outline" type="button" onClick={onCloseMobile}>
+            <X className="icon16" />
+            Close
+          </button>
         </div>
+
+        <div className="sidebar-label">Forecast Parameters</div>
+
+        <CommoditySelect
+          value={commodity}
+          onChange={handleCommodityChange}
+          disabled={status === "loading"}
+        />
 
         <div className="cp-form-group">
           <label>Future Date</label>
@@ -94,44 +104,66 @@ export function PredictionSidebar(props: {
       </div>
 
       <div className="cp-sidebar-section">
-        <h3>Basis Selection</h3>
+        <div className="sidebar-label">Basis Selection</div>
 
-        <div className="cp-checkbox-group">
-          {BASES.map((b) => {
-            const checked = basis.includes(b.value);
-            const limitReached = basis.length >= maxBasis && !checked;
+        <div className="cp-collapse">
+          <button
+            type="button"
+            className="cp-collapse-trigger"
+            onClick={() => setBasisOpen((v) => !v)}
+            aria-expanded={basisOpen}
+          >
+            <span>Choose Basis</span>
+            <span className={cx("cp-collapse-chevron", basisOpen && "is-open")} aria-hidden="true">
+              ▾
+            </span>
+          </button>
 
-            return (
-              <label
-                key={b.value}
-                className={cx("cp-checkbox-item", checked && "selected")}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleBasis(b.value)}
-                  disabled={status === "loading" || limitReached}
-                />
-                <span>{b.label}</span>
-                {checked && b.value === basis[0] ? (
-                  <span className="cp-active-tag">ACTIVE</span>
-                ) : null}
-              </label>
-            );
-          })}
-        </div>
+          {basisOpen ? (
+            <div className="cp-collapse-panel">
+              <div className="cp-checkbox-group">
+                {BASES.map((b) => {
+                  const checked = basis.includes(b.value);
+                  const limitReached = basis.length >= maxBasis && !checked;
 
-        <div className="cp-note">
-          ● ACTIVE:{" "}
-          {(
-            basis[0]
-              ? BASES.find((x) => x.value === basis[0])?.label ?? basis[0]
-              : "—"
-          ).toUpperCase()}
+                  return (
+                    <label
+                      key={b.value}
+                      className={cx("cp-checkbox-item", checked && "selected")}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleBasis(b.value)}
+                        disabled={status === "loading" || limitReached}
+                      />
+                      <span>{b.label}</span>
+                      {checked && b.value === basis[0] ? (
+                        <span className="cp-active-tag">ACTIVE</span>
+                      ) : null}
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="cp-note">
+                ACTIVE:{" "}
+                {(
+                  basis[0]
+                    ? BASES.find((x) => x.value === basis[0])?.label ?? basis[0]
+                    : "--"
+                ).toUpperCase()}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <button className="cp-run-btn" onClick={runPrediction} disabled={!canRun}>
+      <div className="cp-rec-card mt-3 mb-3">
+        <RunTimeline state={runTl} />
+      </div>
+
+      <button className="ui-primary-button" onClick={runPrediction} disabled={!canRun}>
         {status === "loading" ? "RUNNING..." : "RUN FORECAST"}
       </button>
 

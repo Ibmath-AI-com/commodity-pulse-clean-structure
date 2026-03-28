@@ -12,7 +12,7 @@ export class N8nReportGeneratorService implements IReportGeneratorService {
 
   async generate(input: ReportGenerateInput): Promise<ReportGenerateOutput> {
     return this.n8n.call<ReportGenerateInput, ReportGenerateOutput>("report_generate", input, {
-      timeoutMs: 120_000,
+      timeoutMs: 180_000,
       idempotencyKey: `report:${input.commodity}:${input.sourceObjectName}`,
     });
   }

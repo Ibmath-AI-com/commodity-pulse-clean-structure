@@ -20,7 +20,7 @@ async function getDashboard() {
         return await controller();
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -35,9 +35,10 @@ export default async function DashboardPage() {
 
   return (
     <DashboardMain
-      initialRows={data.rows}
-      initialKpis={data.kpis}
-      initialInsights={data.insights}
-    />
+    initialRows={data.rows}
+    initialChart={data.chart}
+    initialKpis={data.kpis}
+    initialInsights={data.insights}
+  />
   );
 }

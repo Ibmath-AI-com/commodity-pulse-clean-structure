@@ -1,32 +1,95 @@
-// E:\AI Projects\commodity-clean-structure\src\application\use-cases\auth\login.use-case.ts
-import type { IInstrumentationService } from "@/src/application/services/instrumentation.service.interface";
-import type { IAuthServerService } from "@/src/application/services/auth-server.service.interface";
-import type { IUserProfilesRepository } from "@/src/application/repositories/user-profiles.repository.interface";
-import type { ISessionService } from "@/src/application/services/session.service.interface";
-import { AuthenticationError } from "@/src/entities/errors/auth";
+import type { IUserRepository } from "@/src/application/repositories/user.repository.interface";
+import type { ISessionRepository } from "@/src/application/repositories/session.repository.interface";
+import type { IPasswordHasher } from "@/src/application/services/password-hasher.service.interface";
+import type { ITokenService } from "@/src/application/services/token-service.interface";
+import { AuthenticationError, UserDisabledError } from "@/src/entities/errors/auth";
 
-export type LoginInput = { email: string; password: string };
-export type ILoginUseCase = (input: LoginInput) => Promise<{ uid: string }>;
+const SESSION_DAYS = 7;
+const MAX_FAILED = 5;
+const LOCK_MINUTES = 15;
+
+export type LoginUseCaseInput = {
+  email: string;
+  password: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+};
+
+export type LoginUseCaseResult = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    isAdmin: boolean;
+    status: "active" | "disabled";
+    mustChangePassword: boolean;
+    lastLoginAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  sessionToken: string;
+  refreshToken: string;
+  expiresAt: Date;
+};
+
+export type ILoginUseCase = (input: LoginUseCaseInput) => Promise<LoginUseCaseResult>;
 
 export const loginUseCase =
   (
-    instrumentation: IInstrumentationService,
-    authClient: IAuthServerService,
-    usersRepo: IUserProfilesRepository,
-    sessionService: ISessionService
+    userRepo: IUserRepository,
+    sessionRepo: ISessionRepository,
+    passwordHasher: IPasswordHasher,
+    tokenService: ITokenService
   ): ILoginUseCase =>
-  async (input) =>
-    instrumentation.startSpan({ name: "loginUseCase", op: "function" }, async () => {
-      const cred = await authClient.authenticate(input);
-      if (!cred?.uid) throw new AuthenticationError("Authentication failed");
+  async (input) => {
+    const email = input.email.trim().toLowerCase();
+    const user = await userRepo.findByEmail(email);
 
-      const email = cred.email ?? input.email;
+    if (!user) throw new AuthenticationError("Invalid credentials");
+    if (user.status !== "active") throw new UserDisabledError();
 
-      // best effort
-      usersRepo.upsertUserProfile({ uid: cred.uid, email }).catch(() => {});
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AuthenticationError("Account temporarily locked");
+    }
 
-      const idToken = await cred.getIdToken();
-      await sessionService.createSessionCookie({ idToken });
+    const ok = await passwordHasher.verify(user.passwordHash, input.password);
 
-      return { uid: cred.uid };
+    if (!ok) {
+      const nextFailed = user.failedLoginCount + 1;
+      const lockedUntil =
+        nextFailed >= MAX_FAILED
+          ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000)
+          : null;
+
+      await userRepo.incrementFailedLogin(user.id, lockedUntil);
+      throw new AuthenticationError("Invalid credentials");
+    }
+
+    await userRepo.resetFailedLogin(user.id);
+    await userRepo.touchLastLogin(user.id);
+
+    const freshUser = await userRepo.findById(user.id);
+    if (!freshUser) {
+      throw new AuthenticationError("User no longer exists");
+    }
+
+    const sessionToken = tokenService.generateToken();
+    const refreshToken = tokenService.generateToken();
+    const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+
+    await sessionRepo.create({
+      userId: freshUser.id,
+      sessionTokenHash: tokenService.hashToken(sessionToken),
+      refreshTokenHash: tokenService.hashToken(refreshToken),
+      userAgent: input.userAgent ?? null,
+      ipAddress: input.ipAddress ?? null,
+      expiresAt,
     });
+
+    return {
+      user: userRepo.toSafeUser(freshUser),
+      sessionToken,
+      refreshToken,
+      expiresAt,
+    };
+  };

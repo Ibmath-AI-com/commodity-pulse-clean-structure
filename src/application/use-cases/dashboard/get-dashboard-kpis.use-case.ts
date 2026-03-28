@@ -1,5 +1,11 @@
+// FILE: src/application/use-cases/dashboard/get-dashboard-kpis.use-case.ts
+
 import type { IInstrumentationService } from "@/src/application/services/instrumentation.service.interface";
-import type { DashboardPrediction, DashboardKpis } from "@/src/entities/models/dashboard";
+import type {
+  DashboardChartPoint,
+  DashboardKpis,
+  DashboardPrediction,
+} from "@/src/entities/models/dashboard";
 
 function isoTodayLocal(): string {
   const d = new Date();
@@ -25,19 +31,25 @@ function todayUTC(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function toDate(value: string): Date | null {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export type IGetDashboardKpisUseCase = ReturnType<typeof getDashboardKpisUseCase>;
 
 export const getDashboardKpisUseCase =
   (instrumentation: IInstrumentationService) =>
-  async (rows: DashboardPrediction[]): Promise<DashboardKpis> =>
+  async (
+    rows: DashboardPrediction[],
+    chart: DashboardChartPoint[]
+  ): Promise<DashboardKpis> =>
     instrumentation.startSpan(
       { name: "getDashboardKpisUseCase", op: "function" },
       async () => {
         const total = rows.length;
 
-        const successRows = rows.filter(
-          (r) => r.status === "success"
-        );
+        const successRows = rows.filter((r) => r.status === "success");
         const success = successRows.length;
 
         const today = isoTodayLocal();
@@ -61,9 +73,7 @@ export const getDashboardKpisUseCase =
             ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
             : null;
 
-        const successRatePct = total
-          ? Math.round((success / total) * 100)
-          : 0;
+        const successRatePct = total ? Math.round((success / total) * 100) : 0;
 
         const marketSignals = rows.reduce((acc, r) => {
           const c = r.news?.count;
@@ -74,11 +84,41 @@ export const getDashboardKpisUseCase =
         const newSignalsToday = rows.reduce((acc, r) => {
           const events = r.news?.events;
           if (!Array.isArray(events)) return acc;
-          return (
-            acc +
-            events.filter((e) => e?.event_date === utcToday).length
-          );
+          return acc + events.filter((e) => e?.event_date === utcToday).length;
         }, 0);
+
+        const cutoff = daysAgo(30);
+
+        const evalPoints = chart
+          .filter((p) => {
+            const d = toDate(p.date);
+            return (
+              d &&
+              d >= cutoff &&
+              typeof p.actualPrice === "number" &&
+              typeof p.predictedPrice === "number" &&
+              p.actualPrice !== 0
+            );
+          })
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        const matchedPointCount30d = evalPoints.length;
+
+        const avgForecastErrorPct30d =
+          matchedPointCount30d > 0
+            ? Math.round(
+                evalPoints.reduce((acc, p) => {
+                  const actual = p.actualPrice as number;
+                  const predicted = p.predictedPrice as number;
+                  return acc + Math.abs((actual - predicted) / actual) * 100;
+                }, 0) / matchedPointCount30d
+              )
+            : null;
+
+        const forecastAccuracyPct30d =
+          avgForecastErrorPct30d == null
+            ? null
+            : Math.max(0, 100 - avgForecastErrorPct30d);
 
         return {
           total,
@@ -90,6 +130,9 @@ export const getDashboardKpisUseCase =
           wowPct,
           marketSignals,
           newSignalsToday,
+          forecastAccuracyPct30d,
+          matchedPointCount30d,
+          avgForecastErrorPct30d,
         };
       }
     );
