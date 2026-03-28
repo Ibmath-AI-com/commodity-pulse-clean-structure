@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -165,8 +166,16 @@ export function AppShell(props: {
       <header className="dashboard-topbar">
         <div className="dashboard-topbar-left">
           <Link href="/dashboard" className="dashboard-logo-mark">
-            <span className="dashboard-logo-c">C</span>
-            <span className="dashboard-logo-title">ali Commodity</span>
+            <span className="dashboard-logo-badge">
+              <Image
+                src="/logo_white.png"
+                alt="Cali Commodity logo"
+                width={18}
+                height={18}
+                className="dashboard-logo-image"
+              />
+            </span>
+            <span className="dashboard-logo-title">Cali Commodity</span>
           </Link>
 
           <span className="dashboard-topbar-divider" aria-hidden="true" />
