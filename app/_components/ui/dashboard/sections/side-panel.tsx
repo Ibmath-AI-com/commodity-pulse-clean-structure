@@ -1,7 +1,7 @@
 // FILE: app/_components/ui/dashboard/side-panel.tsx
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import { CommoditySelect } from "../../commodity-dropdown";
 import { cx } from "@/app/_components/utils";
 import type { DashboardFiltersProps } from "@/src/entities/models/dashboard";
@@ -10,6 +10,8 @@ type CpFiltersAsideProps = DashboardFiltersProps & {
   commodity: string;
   handleCommodityChange: (nextRaw: string) => void;
   commodityDisabled?: boolean;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 };
 
 export function CpFiltersAside({
@@ -24,11 +26,20 @@ export function CpFiltersAside({
   commodity,
   handleCommodityChange,
   commodityDisabled = false,
+  mobileOpen = false,
+  onCloseMobile,
 }: CpFiltersAsideProps) {
   return (
-    <aside className="cp-sidebar">
+    <aside className={cx("cp-sidebar", "cp-mobile-sidebar", mobileOpen && "cp-mobile-sidebar-open")}>
       <div className="cp-sidebar-section">
-        <h3>Filters</h3>
+        <div className="cp-mobile-sidebar-close">
+          <button className="cp-btn-outline" type="button" onClick={onCloseMobile}>
+            <X className="icon16" />
+            Close
+          </button>
+        </div>
+
+        <div className="sidebar-label">Filters</div>
 
         <CommoditySelect
           value={commodity}
@@ -37,9 +48,11 @@ export function CpFiltersAside({
         />
 
         <div className="cp-form-group">
-          <label>Search</label>
+          <label className="ui-form-label">
+            Search
+          </label>
           <input
-            className="w-full h-10 rounded-md border border-slate-200 bg-white pl-9 pr-3 text-[12px] font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-200"
+            className="ui-form-control"
             placeholder="Commodity, basis, date, status..."
             value={qText}
             onChange={(e) => onQTextChange(e.target.value)}
@@ -50,9 +63,9 @@ export function CpFiltersAside({
           Showing {filteredCount} / {totalCount}
         </div>
 
-        <div className="section-actions">
+        <div className="mt-10 section-actions">
           <button
-            className="cp-run-btn"
+            className="ui-primary-button"
             type="button"
             onClick={onRefresh}
             disabled={busy || !uid}

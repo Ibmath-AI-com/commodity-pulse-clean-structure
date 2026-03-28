@@ -178,6 +178,7 @@ function extractEvents(payload: RawEnvelope): NewsEvent[] {
 
   return [];
 }
+
 function stripExt(name: string): string {
   return name.replace(/\.[^.]+$/, "");
 }
@@ -260,15 +261,9 @@ export class NewsStorageService implements INewsStorageService {
 
     for (const objectKey of candidates) {
       try {
-
         const body = await this.storage.readObjectAsText("active", objectKey);
-
         const payload = parseJson(body);
-
-        console.log("[news] payload type =", Array.isArray(payload) ? "array" : typeof payload);
-        console.log("[news] payload keys =", typeof payload === "object" && payload ? Object.keys(payload as Record<string, unknown>) : []);
         const events = extractEvents(payload);
-        console.log("[news] extracted events =", events.length);
 
         if (!events.length) {
           continue;
@@ -277,11 +272,7 @@ export class NewsStorageService implements INewsStorageService {
         const documentId = events[0]?.documentId ?? buildFallbackDocumentId(objectKey);
         return summarize(documentId, events);
       } catch (e) {
-          const message = e instanceof Error ? e.message : String(e);
-          console.log("[news] sourcePath =", input.sourcePath);
-          console.log("[news] commodity  =", input.commodity);
-          console.log("[news] candidate failed =", objectKey);
-          console.log("[news] error =", message);
+        void e;
       }
     }
 

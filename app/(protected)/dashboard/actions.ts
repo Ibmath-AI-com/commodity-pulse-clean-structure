@@ -18,7 +18,7 @@ export async function getDashboardAction(input?: { commodity?: string }) {
       } catch (err) {
         console.error("GET_DASHBOARD_FAILED", err);
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -39,7 +39,7 @@ export async function refreshDashboardAction(input?: { commodity?: string }) {
         return await controller(input);
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
 
         const crash = getInjection("ICrashReporterService");
@@ -64,7 +64,7 @@ export async function logoutAction() {
         crash.report(err);
         throw err;
       } finally {
-        redirect("/sign-in");
+        redirect("/login");
       }
     }
   );

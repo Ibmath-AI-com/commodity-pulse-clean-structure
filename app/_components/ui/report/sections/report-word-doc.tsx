@@ -51,9 +51,12 @@ export function ReportWordDoc({
 }) {
   return (
     <div className="word-doc">
-      <h1>Commodity Pulse Report</h1>
-      <div className="subtitle">
-        {metaSeparator([baseName(objectName), model.hasStructure ? "Structured report" : "Raw report"])}
+      <div className="doc-hero">
+        <div className="eyebrow">Cali Commodity</div>
+        <h1>{title || "Commodity Pulse Report"}</h1>
+        <div className="subtitle">
+          {metaSeparator([baseName(objectName), model.hasStructure ? "Structured report" : "Raw report"])}
+        </div>
       </div>
       <div className="rule" />
 

@@ -20,7 +20,7 @@ export async function listUploadsAction(input: { commodity: string; region?: str
         });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -53,7 +53,7 @@ export async function initUploadAction(input: {
         });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -76,7 +76,7 @@ export async function deleteUploadsAction(input: { objectNames: string[] }) {
         return await controller({ objectNames: input.objectNames });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -99,7 +99,7 @@ export async function archiveUploadsAction(input: { objectNames: string[] }) {
         return await controller({ objectNames: input.objectNames });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);
@@ -128,7 +128,7 @@ export async function getUploadNewsDetailsAction(input: {
         });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);

@@ -17,14 +17,14 @@ export function CpKpiRow(props: DashboardKpiRowProps) {
   } = props;
 
   return (
-    <section className="grid grid-cols-12 gap-4">
-      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4">
+    <section className="grid grid-cols-12 gap-4 dashboard-kpi-row">
+      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4 dashboard-kpi-card">
         <div className="flex items-start justify-between">
           <div className="cp-card-head">Active Forecasts</div>
-          <Info className="w-4 h-4 text-slate-300" />
+          <Info className="h-4 w-4 text-[#9bb7a7] dashboard-kpi-icon" />
         </div>
-        <div className="mt-2 stat-value">{activeForecasts}</div>
-        <div className="mt-3 text-[11px]">
+        <div className="mt-2 txt-lg dashboard-kpi-value">{activeForecasts}</div>
+        <div className="mt-3 text-[11px] dashboard-kpi-meta">
           {activeWowPct == null ? (
             <span className="stat-sub">—</span>
           ) : (
@@ -41,19 +41,19 @@ export function CpKpiRow(props: DashboardKpiRowProps) {
         </div>
       </div>
 
-      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4">
+      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4 dashboard-kpi-card">
         <div className="flex items-start justify-between">
           <div className="cp-card-head">
-            Forecast Accuracy <span className="text-slate-400 font-semibold">(30d)</span>
+            Forecast Accuracy <span className="font-semibold text-[#7f9788]">(30d)</span>
           </div>
-          <Info className="w-4 h-4 text-slate-300" />
+          <Info className="h-4 w-4 text-[#9bb7a7] dashboard-kpi-icon" />
         </div>
 
-        <div className="mt-2 stat-value">
+        <div className="mt-2 txt-lg dashboard-kpi-value">
           {accuracyRatePct == null ? "—" : `${accuracyRatePct}%`}
         </div>
 
-        <div className="mt-3 text-[11px]">
+        <div className="mt-3 text-[11px] dashboard-kpi-meta">
           <span className="stat-sub">
             {matchedPointCount30d != null ? matchedPointCount30d : "—"}
           </span>
@@ -61,35 +61,35 @@ export function CpKpiRow(props: DashboardKpiRowProps) {
         </div>
       </div>
 
-      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4">
+      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4 dashboard-kpi-card">
         <div className="flex items-start justify-between">
           <div className="cp-card-head">
-            Market Signals <span className="text-slate-400 font-semibold ml-3">(recent)</span>
+            Market Signals <span className="ml-3 font-semibold text-[#7f9788]">(recent)</span>
           </div>
-          <Info className="w-4 h-4 text-slate-300" />
+          <Info className="h-4 w-4 text-[#9bb7a7] dashboard-kpi-icon" />
         </div>
 
-        <div className="mt-2 stat-value">{marketSignals}</div>
+        <div className="mt-2 txt-lg dashboard-kpi-value">{marketSignals}</div>
 
-        <div className="mt-3 text-[11px]">
+        <div className="mt-3 text-[11px] dashboard-kpi-meta">
           <span className="stat-sub">▲ {newSignalsToday}</span>
           <span className="stat-sub"> new today</span>
         </div>
       </div>
 
-      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4">
+      <div className="cp-card col-span-12 md:col-span-6 lg:col-span-3 p-4 dashboard-kpi-card">
         <div className="flex items-start justify-between">
           <div className="cp-card-head">
-            Avg Forecast Error <span className="text-slate-400 font-semibold ml-3">(30d)</span>
+            Avg Forecast Error <span className="ml-3 font-semibold text-[#7f9788]">(30d)</span>
           </div>
-          <Info className="w-4 h-4 text-slate-300" />
+          <Info className="h-4 w-4 text-[#9bb7a7] dashboard-kpi-icon" />
         </div>
 
-        <div className="mt-2 stat-value">
+        <div className="mt-2 txt-lg dashboard-kpi-value">
           {avgForecastErrorPct == null ? "—" : `${avgForecastErrorPct}%`}
         </div>
 
-        <div className="mt-3 text-[11px]">
+        <div className="mt-3 text-[11px] dashboard-kpi-meta">
           <span className="stat-sub">- Mean Absolute Percentage Error</span>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
 import { readReportAction } from "@/app/(protected)/report/view/actions";
 import { ReportToolbar } from "./sections/report-toolbar";
 import { ReportWordDoc } from "./sections/report-word-doc";
@@ -23,7 +24,7 @@ function stripExt(name: string) {
 }
 
 function metaSeparator(items: Array<string | null | undefined>) {
-  return items.filter(Boolean).join(" • ");
+  return items.filter(Boolean).join(" | ");
 }
 
 export default function ReportViewMain() {
@@ -75,20 +76,20 @@ export default function ReportViewMain() {
   }, [data]);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <ReportToolbar title={busy ? "Loading…" : pageTitle || "Report"} />
+    <div className="min-h-screen bg-[#edf5ef]">
+      <ReportToolbar title={busy ? "Loading..." : pageTitle || "Report"} />
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
         {err ? (
-          <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-sm">
             {err}
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="px-10 py-10">
+        <div className="overflow-hidden rounded-[28px] border border-emerald-100 bg-white shadow-[0_20px_55px_rgba(15,92,58,0.08)]">
+          <div className="px-5 py-6 sm:px-10 sm:py-10">
             {!data ? (
-              <p className="text-slate-500">{busy ? "Loading…" : "No data."}</p>
+              <p className="text-slate-500">{busy ? "Loading..." : "No data."}</p>
             ) : data.ok && data.kind === "text" ? (
               <div className="word-doc">
                 <h1>{pageTitle || "Report"}</h1>
@@ -97,11 +98,7 @@ export default function ReportViewMain() {
                 <p>{data.text}</p>
               </div>
             ) : data.ok && data.kind === "json" && model ? (
-              <ReportWordDoc
-                model={model}
-                title={pageTitle || "Report"}
-                objectName={objectName}
-              />
+              <ReportWordDoc model={model} title={pageTitle || "Report"} objectName={objectName} />
             ) : (
               <p className="text-slate-500">No data.</p>
             )}

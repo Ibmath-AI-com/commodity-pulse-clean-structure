@@ -146,7 +146,7 @@ export function DetailedBidAnalysis(props: {
       {justTab !== "cali" ? (
         <>
           {justTab === "drivers" ? (
-            <table className="cp-table">
+            <table className="cp-table cp-mobile-records">
               <thead>
                 <tr>
                   <th>DRIVER</th>
@@ -159,13 +159,13 @@ export function DetailedBidAnalysis(props: {
                 {driversRows.length ? (
                   driversRows.map((r, idx) => (
                     <tr key={idx}>
-                      <td>{r.driver}</td>
-                      <td>
+                      <td data-label="Driver">{r.driver}</td>
+                      <td data-label="Direction">
                         <span className={cx("status-label", statusClsFromDir(r.direction))}>
                           {r.direction.toUpperCase()}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Strength">
                         <span
                           className={cx(
                             "status-label",
@@ -179,7 +179,7 @@ export function DetailedBidAnalysis(props: {
                           {r.strength.toUpperCase()}
                         </span>
                       </td>
-                      <td>{r.explanation}</td>
+                      <td data-label="Explanation">{r.explanation}</td>
                     </tr>
                   ))
                 ) : (
@@ -192,7 +192,7 @@ export function DetailedBidAnalysis(props: {
               </tbody>
             </table>
           ) : justTab === "risk" ? (
-            <table className="cp-table">
+            <table className="cp-table cp-mobile-records">
               <thead>
                 <tr>
                   <th>RISK</th>
@@ -205,14 +205,14 @@ export function DetailedBidAnalysis(props: {
                 {risksRows.length ? (
                   risksRows.map((r, idx) => (
                     <tr key={idx}>
-                      <td>{r.risk}</td>
-                      <td>
+                      <td data-label="Risk">{r.risk}</td>
+                      <td data-label="Severity">
                         <span className={cx("status-label", statusClsFromSeverity(r.severity))}>
                           {r.severity.toUpperCase()}
                         </span>
                       </td>
-                      <td>{r.condition}</td>
-                      <td>{r.impact}</td>
+                      <td data-label="Condition">{r.condition}</td>
+                      <td data-label="Impact">{r.impact}</td>
                     </tr>
                   ))
                 ) : (
@@ -225,7 +225,7 @@ export function DetailedBidAnalysis(props: {
               </tbody>
             </table>
           ) : (
-            <table className="cp-table">
+            <table className="cp-table cp-mobile-records">
               <thead>
                 <tr>
                   <th>EVENT</th>
@@ -238,18 +238,18 @@ export function DetailedBidAnalysis(props: {
                 {evidenceRows.length ? (
                   evidenceRows.map((r, idx) => (
                     <tr key={idx}>
-                      <td>{r.event}</td>
-                      <td>
+                      <td data-label="Event">{r.event}</td>
+                      <td data-label="Type">
                         <span className={cx("status-label", "status-info")}>
                           {String(r.type).replace(/_/g, " ").toUpperCase()}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Direction">
                         <span className={cx("status-label", statusClsFromDir(r.direction))}>
                           {r.direction.toUpperCase()}
                         </span>
                       </td>
-                      <td className="line-clamp-3">{r.relevance}</td>
+                      <td className="line-clamp-3" data-label="Relevance">{r.relevance}</td>
                     </tr>
                   ))
                 ) : (
@@ -265,7 +265,7 @@ export function DetailedBidAnalysis(props: {
           )}
         </>
       ) : (
-        <table className="data-grid">
+        <table className="cp-table cp-mobile-records cp-cali-mobile-records">
           <thead>
             <tr>
               <th className="w-[10%]">RANGE</th>
@@ -301,8 +301,8 @@ export function DetailedBidAnalysis(props: {
                     ? "status-danger"
                     : a.includes("slight") || a.includes("recommended")
                     ? "status-warning"
-                    : "st-info";
-
+                    : "status-info";
+                    
                 const highlight = a.includes("optimal");
 
                 return (
@@ -310,8 +310,8 @@ export function DetailedBidAnalysis(props: {
                     <td>{row.caliBidRangeFob || "—"}</td>
                     <td>{row.chanceToWin || "—"}</td>
                     <td>{row.marginRiskDec || "—"}</td>
-                    <td>
-                      <span className={cx("status-label", cls)}>{String(row.assessment ?? "—").toLowerCase()}</span>
+                    <td className={cx("status-cell", cls)}>
+                      <div className="status-label">{String(row.assessment ?? "—").toLowerCase()}</div>
                     </td>
                     <td>{row.marginPerTon || "—"}</td>
                     <td>

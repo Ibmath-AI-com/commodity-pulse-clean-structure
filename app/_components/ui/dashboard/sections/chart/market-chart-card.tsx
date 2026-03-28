@@ -5,20 +5,18 @@ import type { ReactNode } from "react";
 
 export function CpMarketChartCard({ children }: { children: ReactNode }) {
   return (
-    <div className="cp-card col-span-12 lg:col-span-8 p-4">
+    <div className="cp-card chart-card col-span-12 lg:col-span-8 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h2">Market Chart</div>
+          <div className="h2">Actual vs Forecast</div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md p-1">
-            <button className="px-3 py-1 rounded text-[11px] font-bold text-slate-600 hover:bg-white">7D</button>
-            <button className="px-3 py-1 rounded bg-white text-[11px] font-extrabold text-slate-900 shadow-sm">
-              1M
-            </button>
-            <button className="px-3 py-1 rounded text-[11px] font-bold text-slate-600 hover:bg-white">6M</button>
-            <button className="px-3 py-1 rounded text-[11px] font-bold text-slate-600 hover:bg-white">3M</button>
+          <div className="timeframe-btns">
+            <button className="tf-btn">7D</button>
+            <button className="tf-btn active">1M</button>
+            <button className="tf-btn">6M</button>
+            <button className="tf-btn">3M</button>
           </div>
         </div>
       </div>
@@ -30,7 +28,7 @@ export function CpMarketChartCard({ children }: { children: ReactNode }) {
           <span className="inline-block w-3 h-[2px] bg-slate-800" /> Actual
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-[2px]" style={{ borderTop: "2px dashed #3b82f6" }} /> Predicted
+          <span className="inline-block w-3 h-[2px]" style={{ borderTop: "2px dashed #3bf6a8" }} /> Predicted
         </div>
         <div className="flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-sm bg-slate-200" /> Confidence

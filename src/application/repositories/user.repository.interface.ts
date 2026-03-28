@@ -3,6 +3,7 @@ import type { SafeUser, User } from "@/src/entities/models/auth";
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
+  listAll(): Promise<User[]>;
   create(input: {
     name: string;
     email: string;

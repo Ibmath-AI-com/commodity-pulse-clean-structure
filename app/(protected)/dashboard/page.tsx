@@ -20,7 +20,7 @@ async function getDashboard() {
         return await controller();
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);

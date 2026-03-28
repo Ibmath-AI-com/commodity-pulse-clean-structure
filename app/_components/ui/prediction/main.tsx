@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/app/_components/app-shell";
 import { runPredictionAction } from "@/app/(protected)/prediction/actions";
@@ -28,8 +28,14 @@ import type { PredictionReadinessResult } from "@/src/entities/models/document-g
 import { BASES, normalizeCommodity } from "@/lib/common/options";
 import { toNumberLoose } from "@/lib/prediction/normalize";
 import { mapPayloadToResult } from "@/lib/prediction/mappers";
-import { LS_COMMODITY, clearPredictionStorage } from "@/lib/prediction/storage";
+import { clearPredictionStorage } from "@/lib/prediction/storage";
 import { cx } from "@/app/_components/utils";
+import {
+  DEFAULT_COMMODITY,
+  getStoredCommodity,
+  setStoredCommodity,
+  subscribeStoredCommodity,
+} from "@/lib/common/commodity-preference";
 
 import { RiskAnalysisPanel } from "./sections/risk-analysis";
 import { DetailedBidAnalysis } from "./sections/detailed-bid-analysis";
@@ -129,7 +135,9 @@ export default function PredictionMain() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const [commodity, setCommodity] = useState<string>("sulphur");
+  const [commodity, setCommodity] = useState<string>(() =>
+    typeof window === "undefined" ? DEFAULT_COMMODITY : getStoredCommodity()
+  );
   const [futureDate, setFutureDate] = useState<string>("");
 
   const [basis, setBasis] = useState<string[]>(["middle-east"]);
@@ -157,6 +165,9 @@ export default function PredictionMain() {
     steps: { report: "pending", forecast: "pending", refresh: "pending" },
     message: "",
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => subscribeStoredCommodity((value) => setCommodity(value)), []);
 
   function tlReset(msg?: string) {
     setRunTl({
@@ -179,6 +190,11 @@ export default function PredictionMain() {
     window.setTimeout(() => {
       setRunTl((prev) => ({ ...prev, visible: false, message: "" }));
     }, ms);
+  }
+
+  function handlePrint() {
+    if (status !== "success") return;
+    window.print();
   }
 
   const runBusy =
@@ -214,10 +230,7 @@ export default function PredictionMain() {
     resetPredictionScreenState();
 
     setCommodity(next);
-    try {
-      window.localStorage.setItem(LS_COMMODITY, next.toLowerCase());
-      window.dispatchEvent(new Event("ai:commodity"));
-    } catch {}
+    setStoredCommodity(next);
   }
 
   const selectedBases = useMemo(() => {
@@ -538,15 +551,20 @@ export default function PredictionMain() {
     });
   }, [bundle, rawEvidenceEvents]);
 
-  function handlePrint() {
-    if (status !== "success") return;
-    window.print();
-  }
 
   return (
-    <AppShell title="Prediction">
+    <AppShell title="Prediction" onOpenMobileSidebar={() => setSidebarOpen(true)}>
       <div className="cp-root">
-        <div className="cp-container">
+        <div className="cp-container cp-mobile-layout">
+          {sidebarOpen ? (
+            <button
+              type="button"
+              className="cp-mobile-sidebar-backdrop"
+              aria-label="Close prediction sidebar"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           <PredictionSidebar
             commodity={commodity}
             futureDate={futureDate}
@@ -562,60 +580,12 @@ export default function PredictionMain() {
             setBasePriceText={setBasePriceText}
             toggleBasis={toggleBasis}
             runPrediction={runPrediction}
+            runTl={runTl}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
           />
 
           <main className="cp-main">
-            <div className="cp-card cp-rec-card">
-              <div className="cp-rec-header">
-                <div className="cp-rec-text">
-                  <h2>
-                    <ArrowRight size={14} className="th-inline" /> Recommended Action:
-                    <strong>
-                      {bundle?.tender?.tenderAction ? String(bundle.tender.tenderAction) : "—"} at{" "}
-                      {optimalRow?.caliBidRangeFob
-                        ? String(optimalRow.caliBidRangeFob).replace(/\s*-\s*/g, "–")
-                        : "—"}{" "}
-                      {tenderUnit}
-                      {" - "}
-                      {selectedBases?.[0]?.label ?? "—"}
-                    </strong>
-                  </h2>
-
-                  <p>
-                    <strong>Rationale:</strong>{" "}
-                    {optimalRow ? (
-                      <>
-                        {getRowString(optimalRow, "chanceToWin") ?? "—"} win probability + balanced margin (
-                        {getRowString(optimalRow, "marginPerTon") ?? "—"})
-                      </>
-                    ) : bundle?.tender?.rationale ? (
-                      String(bundle.tender.rationale)
-                    ) : (
-                      "Run a forecast to generate rationale."
-                    )}
-                  </p>
-                </div>
-
-                <div className="cp-rec-card">
-                  <RunTimeline state={runTl} cx={cx} />
-                </div>
-
-                <div className="cp-actions">
-                  <button className="cp-btn-outline" type="button" disabled={status !== "success"}>
-                    <Download size={14} /> EXPORT
-                  </button>
-
-                  <button className="cp-btn-outline" type="button" onClick={handlePrint} disabled={status !== "success"}>
-                    <Printer size={14} /> PRINT
-                  </button>
-
-                  <button className="cp-btn-outline" type="button" disabled>
-                    <Share2 size={14} /> SHARE
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <div className="dashboard-grid">
               <ForecastResultsCard
                 bundle={bundle}
@@ -625,6 +595,8 @@ export default function PredictionMain() {
                 sentimentScore={sentimentScore}
                 direction={direction}
                 strength={strength}
+                canPrint={status === "success"}
+                onPrint={handlePrint}
               />
               <RiskAnalysisPanel risk={riskPayload} />
             </div>

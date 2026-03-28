@@ -34,6 +34,12 @@ import type {
 import type { DocumentNewsDetails } from "@/src/entities/models/news";
 
 import type { Busy, Mode, UploadModalState } from "./types/types";
+import {
+  DEFAULT_COMMODITY,
+  getStoredCommodity,
+  setStoredCommodity,
+  subscribeStoredCommodity,
+} from "@/lib/common/commodity-preference";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -41,8 +47,6 @@ const DATE_FMT = new Intl.DateTimeFormat("en-AU", {
   day: "2-digit",
   timeZone: "Australia/Sydney",
 });
-
-const LS_COMMODITY = "ai_commodity_selected";
 
 const COMMODITIES = [
   { value: "sulphur", label: "Sulphur" },
@@ -122,9 +126,8 @@ function isAllowedPricesFile(f: File) {
 
 export default function UploadMain() {
   const [commodity, setCommodity] = useState<string>(() => {
-    if (typeof window === "undefined") return "sulphur";
-    const v = window.localStorage.getItem(LS_COMMODITY);
-    return normalizeCommodity((v ?? "sulphur").trim());
+    if (typeof window === "undefined") return DEFAULT_COMMODITY;
+    return getStoredCommodity();
   });
 
   const [region] = useState("global");
@@ -153,6 +156,7 @@ export default function UploadMain() {
   const [selectedRow, setSelectedRow] = useState<UploadListItem | null>(null);
   const [selectedNews, setSelectedNews] = useState<DocumentNewsDetails | null>(null);
   const [isNewsPending, startNewsTransition] = useTransition();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const reportInputRef = useRef<HTMLInputElement | null>(null);
   const pricesInputRef = useRef<HTMLInputElement | null>(null);
@@ -211,17 +215,15 @@ export default function UploadMain() {
 
   useEffect(() => {
     const fromUrl = searchParams?.get("commodity");
-    const fromLs = typeof window !== "undefined" ? window.localStorage.getItem(LS_COMMODITY) : null;
-    const picked = (fromUrl ?? fromLs ?? "sulphur").trim();
+    const fromLs = typeof window !== "undefined" ? getStoredCommodity() : DEFAULT_COMMODITY;
+    const picked = (fromUrl ?? fromLs ?? DEFAULT_COMMODITY).trim();
     setCommodity(normalizeCommodity(picked));
   }, [searchParams]);
 
+  useEffect(() => subscribeStoredCommodity((value) => setCommodity(value)), []);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const v = commodity.trim().toLowerCase();
-    if (!v) return;
-    window.localStorage.setItem(LS_COMMODITY, v);
-    window.dispatchEvent(new Event("ai:commodity"));
+    setStoredCommodity(commodity || DEFAULT_COMMODITY);
   }, [commodity]);
 
   async function refreshList() {
@@ -435,7 +437,7 @@ export default function UploadMain() {
   const disableAll = listBusy || busyReport !== "idle" || busyPrices !== "idle";
 
   return (
-    <AppShell title="Upload">
+    <AppShell title="Upload" onOpenMobileSidebar={() => setSidebarOpen(true)}>
       <div className="cp-root">
         <input
           ref={reportInputRef}
@@ -484,7 +486,16 @@ export default function UploadMain() {
           }}
         />
 
-        <div className="cp-container">
+        <div className="cp-container cp-mobile-layout">
+          {sidebarOpen ? (
+            <button
+              type="button"
+              className="cp-mobile-sidebar-backdrop"
+              aria-label="Close upload sidebar"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           <UploadSidebar
             commodity={commodity}
             commodities={COMMODITIES}
@@ -493,23 +504,11 @@ export default function UploadMain() {
             infoValue={`${pdfRows.length + excelRows.length} files detected.`}
             onOpenIntro={() => setIntroOpen(true)}
             banner={<Banner msg={msgReport || msgPrices} />}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
           />
 
           <main className="cp-main">
-            <div className="cp-card cp-rec-card">
-              <div className="cp-rec-header">
-                <div className="cp-rec-text">
-                  <h2>
-                    <ArrowRight size={14} className="th-inline" /> UPLOAD SOURCES FOR THE FORECAST:
-                  </h2>
-                  <p style={{ marginTop: 10, color: "#5e6c84" }}>
-                    The report is used to extract events and produce a clear written summary. The prices file calibrates
-                    the forecast with real market history.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <DocsCard
               disableAll={disableAll}
               listBusy={listBusy}

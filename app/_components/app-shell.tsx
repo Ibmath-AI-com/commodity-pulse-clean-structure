@@ -3,17 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Settings, LogOut, User } from "lucide-react";
+import { Bell, Settings, LogOut, User, Users, Menu } from "lucide-react";
 
-const LS_COMMODITY = "ai_commodity_selected";
+import { logOut } from "@/app/(auth)/actions";
+import {
+  DEFAULT_COMMODITY,
+  getStoredCommodity,
+  subscribeStoredCommodity,
+} from "@/lib/common/commodity-preference";
 
 type NavItem = { href: string; label: string };
 
 const NAV: NavItem[] = [
-  { href: "/dashboard", label: "DASHBOARD" },
-  { href: "/prediction", label: "PREDICTION" },
-  { href: "/upload", label: "UPLOAD" },
-  { href: "/report", label: "REPORT" },
+  { href: "/dashboard", label: "Home" },
+  { href: "/prediction", label: "Prediction" },
+  { href: "/upload", label: "Upload" },
+  { href: "/report", label: "Report" },
 ];
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -46,27 +51,59 @@ function initialsFromEmailOrName(email?: string | null, name?: string | null) {
 export function AppShell(props: {
   title?: string;
   children: React.ReactNode;
-
-  // display only (provided by layout/page)
   userEmail?: string | null;
   userName?: string | null;
-
-  // server action (passed from layout)
-  //logoutAction: () => Promise<void>;
+  onOpenMobileSidebar?: () => void;
 }) {
-  const { title, children, userEmail = null, userName = null } = props;
+  const { title, children, userEmail = null, userName = null, onOpenMobileSidebar } = props;
 
   const pathname = usePathname();
-  const [selectedCommodity, setSelectedCommodity] = useState<string>("");
-
+  const [selectedCommodity, setSelectedCommodity] = useState<string>(() =>
+    typeof window === "undefined" ? DEFAULT_COMMODITY : getStoredCommodity()
+  );
   const [userOpen, setUserOpen] = useState(false);
   const userRef = useRef<HTMLDivElement | null>(null);
-
   const [now, setNow] = useState<Date>(() => new Date());
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+    email: string;
+    isAdmin: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const res = await fetch("/api/auth/me", { method: "GET", cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setCurrentUser(null);
+          return;
+        }
+
+        const json = (await res.json()) as {
+          ok: boolean;
+          user?: { name: string; email: string; isAdmin: boolean };
+        };
+
+        if (!cancelled && json.ok && json.user) {
+          setCurrentUser(json.user);
+        }
+      } catch {
+        if (!cancelled) setCurrentUser(null);
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const timeText = useMemo(() => {
@@ -93,28 +130,7 @@ export function AppShell(props: {
   }, [now]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const read = () => {
-      const v = (window.localStorage.getItem(LS_COMMODITY) ?? "").trim();
-      setSelectedCommodity(v);
-    };
-
-    read();
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === LS_COMMODITY) read();
-    };
-    const onCommodityEvent: EventListener = () => read();
-
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("ai:commodity", onCommodityEvent);
-
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("ai:commodity", onCommodityEvent);
-    };
+    return subscribeStoredCommodity((value) => setSelectedCommodity(value));
   }, []);
 
   useEffect(() => {
@@ -122,6 +138,7 @@ export function AppShell(props: {
       if (!userRef.current) return;
       if (!userRef.current.contains(e.target as Node)) setUserOpen(false);
     }
+
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setUserOpen(false);
     }
@@ -130,108 +147,131 @@ export function AppShell(props: {
       document.addEventListener("mousedown", onDocDown);
       document.addEventListener("keydown", onKey);
     }
+
     return () => {
       document.removeEventListener("mousedown", onDocDown);
       document.removeEventListener("keydown", onKey);
     };
   }, [userOpen]);
 
-  const initials = useMemo(() => initialsFromEmailOrName(userEmail, userName), [userEmail, userName]);
-  const displayLabel = useMemo(() => (userName ?? "").trim() || initials, [userName, initials]);
+  const resolvedEmail = currentUser?.email ?? userEmail ?? null;
+  const resolvedName = currentUser?.name ?? userName ?? null;
+  const isAdmin = Boolean(currentUser?.isAdmin);
+  const initials = useMemo(() => initialsFromEmailOrName(resolvedEmail, resolvedName), [resolvedEmail, resolvedName]);
+  const displayLabel = useMemo(() => (resolvedName ?? "").trim() || initials, [resolvedName, initials]);
 
   return (
     <div className="tt-terminal">
-      <header>
-        <div className="header-left">
-          <div className="logo">
-            <span>C</span> Commodity Pulse
+      <header className="dashboard-topbar">
+        <div className="dashboard-topbar-left">
+          <Link href="/dashboard" className="dashboard-logo-mark">
+            <span className="dashboard-logo-c">C</span>
+            <span className="dashboard-logo-title">ali Commodity</span>
+          </Link>
+
+          <span className="dashboard-topbar-divider" aria-hidden="true" />
+
+          <div className="dashboard-status-chip">
+            <span className="dashboard-status-dot" aria-hidden="true" />
+            ACTIVE
           </div>
-          <div className="status-pill">
-            ACTIVE <span className="separater">|</span>{" "}
-            <span className="tt-tickerValue tt-tickerUp">{titleCase(selectedCommodity)}</span>
-          </div>
-          <div className="status-pill">Updated 2 mins ago</div>
-          <div className="status-pill">
-            Region: <strong>Middle East</strong>
-          </div>
+
+          <span className="dashboard-topbar-commodity">
+            {titleCase(selectedCommodity) || titleCase(DEFAULT_COMMODITY)}
+          </span>
+          <span className="dashboard-topbar-pipe" aria-hidden="true">
+            |
+          </span>
+          <span className="dashboard-topbar-update">Updated 2 mins ago</span>
+          <span className="dashboard-topbar-pipe" aria-hidden="true">
+            |
+          </span>
+          <span className="dashboard-topbar-region">Region: Middle East</span>
         </div>
 
-        <div className="header-right">
-          <div className="tt-userSection">
-            <span className="status-pill">{timeText}</span>
+        <div className="dashboard-topbar-right">
+          <span className="dashboard-topbar-time">{timeText}</span>
 
-            <button className="tt-iconBtn" type="button" title="Notifications" aria-label="Notifications">
-              <Bell className="tt-icon" />
+          <button className="dashboard-notif-btn" type="button" title="Notifications" aria-label="Notifications">
+            <Bell  />
+          </button>
+
+          <div className="tt-settingsWrap" ref={userRef}>
+            <button
+              className={cx("dashboard-avatar", userOpen && "dashboard-avatar-active")}
+              type="button"
+              aria-label="User menu"
+              onClick={() => setUserOpen((v) => !v)}
+            >
+              <span aria-hidden="true" className="dashboard-avatar-text">
+                {initials}
+              </span>
             </button>
 
-            <div className="tt-settingsWrap" ref={userRef}>
-              <button
-                className={cx("tt-iconBtn", userOpen && "tt-iconBtnActive")}
-                type="button"
-                aria-label="User menu"
-                onClick={() => setUserOpen((v) => !v)}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 999,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    fontWeight: 900,
-                    letterSpacing: 0.4,
-                    color: "#172b4d",
-                    background: "#deebff",
-                    border: "1px solid #b3d4ff",
-                  }}
-                >
-                  {initials}
-                </span>
-              </button>
+            {userOpen ? (
+              <div className="tt-menu">
+                <div className="tt-menuHeader">ACCOUNT</div>
 
-              {userOpen ? (
-                <div className="tt-menu">
-                  <div className="tt-menuHeader">ACCOUNT</div>
-
-                  <div className="tt-menuItem" style={{ cursor: "default" as const }}>
-                    <User className="tt-menuIcon" />
-                    <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-                      <span style={{ fontWeight: 800, color: "#172b4d" }}>{displayLabel}</span>
-                      <span style={{ fontSize: 12, color: "#5e6c84", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {userEmail || "—"}
-                      </span>
+                <div className="tt-menuItem" style={{ cursor: "default" as const }}>
+                  <User className="tt-menuIcon" />
+                  <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                    <span style={{ fontWeight: 800, color: "#172b4d" }}>{displayLabel}</span>
+                    <span style={{ fontSize: 12, color: "#5e6c84", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {resolvedEmail || "--"}
                     </span>
-                  </div>
-
-                  <div className="tt-menuDivider" />
-
-                  <Link className="tt-menuItem" href="/settings" onClick={() => setUserOpen(false)}>
-                    <Settings className="tt-menuIcon" />
-                    Settings
-                  </Link>
-
-                  <div className="tt-menuDivider" />
-
-                  {/* ✅ server action trigger */}
-                  <form >{/*action={logoutAction}*/}
-                    <button className="tt-menuItem tt-menuDanger" type="submit">
-                      <LogOut className="tt-menuIcon" />
-                      Log out
-                    </button>
-                  </form>
+                  </span>
                 </div>
-              ) : null}
-            </div>
+
+                <div className="tt-menuDivider" />
+
+                {isAdmin ? (
+                  <>
+                    <Link className="tt-menuItem" href="/users" onClick={() => setUserOpen(false)}>
+                      <Users className="tt-menuIcon" />
+                      Users
+                    </Link>
+
+                    <div className="tt-menuDivider" />
+                  </>
+                ) : null}
+
+                <Link className="tt-menuItem" href="/settings" onClick={() => setUserOpen(false)}>
+                  <Settings className="tt-menuIcon" />
+                  Settings
+                </Link>
+
+                <div className="tt-menuDivider" />
+
+                <form action={logOut}>
+                  <button className="tt-menuItem tt-menuDanger" type="submit">
+                    <LogOut className="tt-menuIcon" />
+                    Log out
+                  </button>
+                </form>
+              </div>
+            ) : null}
           </div>
         </div>
       </header>
 
-      <nav className="tt-nav ml-10">
+      <nav className="dashboard-nav-tabs">
+        {onOpenMobileSidebar ? (
+          <button
+            type="button"
+            className="dashboard-nav-mobileMenu md:hidden"
+            onClick={onOpenMobileSidebar}
+            aria-label="Open menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        ) : null}
+
         {NAV.map((item) => (
-          <Link key={item.href} href={item.href} className={cx("tt-navLink", isActive(pathname, item.href) && "tt-navLinkActive")}>
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cx("dashboard-nav-tab", isActive(pathname, item.href) && "dashboard-nav-tab-active")}
+          >
             {item.label}
           </Link>
         ))}
@@ -242,7 +282,7 @@ export function AppShell(props: {
         {children}
       </main>
 
-      <footer className="tt-footer">© {now.getFullYear()} Commodity Pulse | Market data delayed by 15 minutes | For professional use only</footer>
+      <footer className="tt-footer">(c) {now.getFullYear()} Commodity Pulse | Market data delayed by 15 minutes | For professional use only</footer>
     </div>
   );
 }

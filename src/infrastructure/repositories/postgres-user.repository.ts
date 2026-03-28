@@ -55,6 +55,13 @@ export class PostgresUserRepository implements IUserRepository {
     return res.rowCount ? mapUser(res.rows[0]) : null;
   }
 
+  async listAll(): Promise<User[]> {
+    const res = await this.pool.query<DbUserRow>(
+      `select * from app_user order by created_at desc, email asc`
+    );
+    return res.rows.map(mapUser);
+  }
+
   async create(input: {
     name: string;
     email: string;

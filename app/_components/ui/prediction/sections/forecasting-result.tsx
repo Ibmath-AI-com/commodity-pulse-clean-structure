@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import clsx from "clsx";
-import { Info, TrendingDown, TrendingUp } from "lucide-react";
+import { Printer, TrendingDown, TrendingUp } from "lucide-react";
 
 import type { PredictionBundle } from "@/src/entities/models/prediction";
 import type { Direction, Strength} from "../types/types";
@@ -15,6 +15,8 @@ export type ForecastResultsCardProps = {
   sentimentScore: number | null;
   direction: Direction;
   strength: Strength;
+  canPrint: boolean;
+  onPrint: () => void;
 };
 
 export function ForecastResultsCard({
@@ -25,6 +27,8 @@ export function ForecastResultsCard({
   sentimentScore,
   direction,
   strength,
+  canPrint,
+  onPrint,
 }: ForecastResultsCardProps) {
   const predicted =
     bundle?.tender?.tenderPredictedPrice != null
@@ -37,15 +41,17 @@ export function ForecastResultsCard({
 
   return (
     <div className="cp-card p-4">
-      <div className="table-header">
+      <div className="forecast-results-header">
         <span className="cp-card-head">FORECAST RESULTS</span>
-        <Info size={16} />
+        <button className="cp-btn-outline" type="button" onClick={onPrint} disabled={!canPrint}>
+          <Printer size={14} /> PRINT
+        </button>
       </div>
 
       <div className="forecast-stats">
         <div className="stat-box">
           <div className="stat-label">Predicted Price</div>
-          <div className="stat-value">
+          <div className="txt-lg">
             {predicted} <span className="stat-unit">({tenderUnit})</span>
           </div>
           <div className="stat-sub">
@@ -56,7 +62,7 @@ export function ForecastResultsCard({
 
         <div className="stat-box">
           <div className="stat-label">Expected Range</div>
-          <div className="stat-value">
+          <div className="txt-lg">
             {range} <span className="stat-unit">({tenderUnit})</span>
           </div>
           <div className="stat-sub">Recent average error: +5.2%</div>

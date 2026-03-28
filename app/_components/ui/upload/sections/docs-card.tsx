@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, Plus, Eye, Loader2 } from "lucide-react";
+import { RefreshCw, Plus, Eye, Loader2, Archive, Trash2, Newspaper, Upload, X } from "lucide-react";
 import { DocsRow } from "../types/types";
 
 function isArchivedName(objectName: string) {
@@ -99,28 +99,28 @@ export function DocsCard({
     <section className="cp-card">
       <div className="mainCardTop">
         <div>
-          <div className="h2">MARKET INTELLIGENCE (DOCUMENTS)</div>
+          <div className="h2">MARKET INTELLIGENCE</div>
         </div>
 
-        <button
-          className="cp-btn-outline"
-          type="button"
-          onClick={onRefreshList}
-          disabled={disableAll}
-          title="Refresh list"
-        >
-          <RefreshCw className={cx("icon16", listBusy && "spin")} />
-          {listBusy ? "REFRESHING..." : "REFRESH"}
-        </button>
-      </div>
+        <div className="flex items-center gap-2 justify-start">
+          <button
+            className="cp-btn-outline upload-refresh-btn"
+            type="button"
+            onClick={onRefreshList}
+            disabled={disableAll}
+            title="Refresh list"
+          >
+            <RefreshCw className={cx("icon16", listBusy && "spin")} />
+            <span className="hidden sm:inline">{listBusy ? "REFRESHING..." : "REFRESH"}</span>
+          </button>
 
-      <div className="actionsRow">
-        <button className="primaryBtn" type="button" disabled={disableAll} onClick={onPickReportFile}>
-          <Plus className="icon16" />
-          Upload Files
-        </button>
+          <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickReportFile}>
+            <Plus className="icon16" />
+            Upload File
+          </button>
+        </div>
       </div>
-
+      
       {reportFiles.length ? (
         <div className="pendingRow">
           <div className="pendingLeft">
@@ -137,11 +137,13 @@ export function DocsCard({
           </div>
 
           <div className="pendingRight">
-            <button className="primaryBtn" type="button" onClick={onUploadReportFile} disabled={busyReport !== "idle"}>
+            <button className="ui-primary-sm-button" type="button" onClick={onUploadReportFile} disabled={busyReport !== "idle"}>
+              <Upload className="icon16" />
               {busyReport === "idle" ? `Upload ${reportFiles.length} file(s)` : busyLabel("report")}
             </button>
 
-            <button className="secondaryBtn" type="button" onClick={onClearReportFile} disabled={busyReport !== "idle"}>
+            <button className="cp-btn-outline" type="button" onClick={onClearReportFile} disabled={busyReport !== "idle"}>
+              <X className="icon16" />
               Clear
             </button>
           </div>
@@ -149,7 +151,7 @@ export function DocsCard({
       ) : null}
 
       <div className="tableWrap" key={`pdf-${refreshTick}`}>
-        <table className="cp-table">
+        <table className="cp-table cp-mobile-records">
           <thead>
             <tr>
               <th className="thActive">Active</th>
@@ -180,11 +182,11 @@ export function DocsCard({
 
                 return (
                   <tr key={r.name}>
-                    <td className="tdCenter">
+                    <td className="tdCenter" data-label="Active">
                       <input type="checkbox" className="checkbox" checked={!archived} readOnly />
                     </td>
 
-                    <td>
+                    <td data-label="File Name">
                       <div className="fileCell">
                         <i className="fa-regular fa-xl fa-file-pdf text-red-500" aria-hidden="true" />
                         <div className="fileText">
@@ -195,73 +197,76 @@ export function DocsCard({
                       </div>
                     </td>
 
-                    <td className="muted">{fmtDate(r.updatedAt ?? r.updated)}</td>
+                    <td className="muted" data-label="Date Uploaded">{fmtDate(r.updatedAt ?? r.updated)}</td>
 
-                    <td className="tdCenter">
+                    <td className="tdCenter" data-label="News">
                       <button
-                        className="secondaryBtn-bl"
+                        className="inline-flex min-w-[72px] items-center justify-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
                         disabled={disableAll}
                         title="Active / Total news"
                         onClick={() => onOpenNews(r)}
                       >
+                        <Newspaper className="h-3.5 w-3.5" />
                         {activeNews}/{totalNews}
                       </button>
                     </td>
 
-                    <td>
+                    <td data-label="AI Status">
                       <span className={cx("badge", status.cls)}>
                         {status.spinning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                         {status.text}
                       </span>
                     </td>
 
-                    <td className="actionsCell">
-                      <button
-                        className="secondaryBtn-bl"
-                        type="button"
-                        disabled={disableAll || !canView}
-                        title={canView ? "View generated report" : "Generate AI News Analysis first"}
-                        onClick={() => {
-                          if (!r.reportObjectName) return;
-                          openViewer(r.reportObjectName);
-                        }}
-                      >
-                        <Eye className="icon16" />
-                      </button>
+                    <td className="actionsCell" data-label="Actions">
+                      <div className="cp-mobile-actionRow gap-3">
+                        <button
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={disableAll || !canView}
+                          title={canView ? "View generated report" : "Generate AI News Analysis first"}
+                          onClick={() => {
+                            if (!r.reportObjectName) return;
+                            openViewer(r.reportObjectName);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
 
-                      <button
-                        className="secondaryBtn-bl"
-                        type="button"
-                        disabled={disableAll || archived}
-                        title={archived ? "Already archived" : "Archive"}
-                        onClick={() => {
-                          openArchiveModal({
-                            mode: "report",
-                            objectNames: [r.path],
-                            displayName: baseName(r.name),
-                            alsoDeletesGenerated: false,
-                          });
-                        }}
-                      >
-                        <i className="fa fa-archive" aria-hidden="true" />
-                      </button>
+                        <button
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={disableAll || archived}
+                          title={archived ? "Already archived" : "Archive"}
+                          onClick={() => {
+                            openArchiveModal({
+                              mode: "report",
+                              objectNames: [r.path],
+                              displayName: baseName(r.name),
+                              alsoDeletesGenerated: false,
+                            });
+                          }}
+                        >
+                          <Archive className="h-4 w-4" />
+                        </button>
 
-                      <button
-                        className="dangerBtn"
-                        type="button"
-                        disabled={disableAll}
-                        onClick={() => {
-                          openDeleteModal({
-                            mode: "report",
-                            objectNames: [r.path],
-                            displayName: baseName(r.name),
-                            alsoDeletesGenerated: false,
-                          });
-                        }}
-                      >
-                        <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                      </button>
+                        <button
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={disableAll}
+                          onClick={() => {
+                            openDeleteModal({
+                              mode: "report",
+                              objectNames: [r.path],
+                              displayName: baseName(r.name),
+                              alsoDeletesGenerated: false,
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -1,19 +1,13 @@
-// FILE: src/app/(protected)/layout.tsx
-//import { cookies } from "next/headers";
-//import { redirect } from "next/navigation";
-//import { adminAuth } from "@/lib/firebaseAdmin";
+import { redirect } from "next/navigation";
+
+import { getCurrentUserFromSession } from "@/lib/auth/get-current-user";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  //const cookieStore = await cookies(); // ✅ await
-  //const session = cookieStore.get("session")?.value;
+  const user = await getCurrentUserFromSession();
 
-  //if (!session) redirect("/login");
-
-  //try {
-  //  await adminAuth.verifySessionCookie(session, true);
-  //} catch {
-  //  redirect("/login");
- // }
+  if (!user) {
+    redirect("/login");
+  }
 
   return <>{children}</>;
 }

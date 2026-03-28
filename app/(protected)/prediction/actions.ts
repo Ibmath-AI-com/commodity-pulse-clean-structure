@@ -32,7 +32,7 @@ export async function runPredictionAction(input: {
         });
       } catch (err) {
         if (err instanceof UnauthenticatedError || err instanceof AuthenticationError) {
-          redirect("/sign-in");
+          redirect("/login");
         }
         const crash = getInjection("ICrashReporterService");
         crash.report(err);

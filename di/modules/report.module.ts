@@ -22,7 +22,12 @@ export function createReportModule() {
 
   m.bind(DI_SYMBOLS.IReadReportController).toHigherOrderFunction(
     readReportController,
-    [DI_SYMBOLS.IInstrumentationService, DI_SYMBOLS.ISessionService, DI_SYMBOLS.IReadReportUseCase]
+    [
+      DI_SYMBOLS.IInstrumentationService,
+      DI_SYMBOLS.ISessionService,
+      DI_SYMBOLS.IGetCurrentUserUseCase,
+      DI_SYMBOLS.IReadReportUseCase,
+    ]
   );
 
   return m;

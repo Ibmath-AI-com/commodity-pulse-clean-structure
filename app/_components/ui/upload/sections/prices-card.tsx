@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Sheet, Trash2, UploadCloud, Wand2, Plus } from "lucide-react";
+import { Sheet, Trash2, UploadCloud, Wand2, Plus, Upload, X  } from "lucide-react";
 import { PricesRow } from "../types/types";
 
 type PricesTab = "web" | "api" | "manual";
@@ -70,6 +70,13 @@ export function PricesCard({
           <div>
             <div className="h2">PRICE CALIBRATION (DATA SOURCE)</div>
           </div>
+
+          <div className="flex items-center gap-2 justify-start">
+            <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickPricesFile}>
+                <Plus className="icon16" />
+                Upload File
+              </button>
+          </div>
         </div>
 
         {/* Tabs styled like DetailedBidAnalysis */}
@@ -110,10 +117,7 @@ export function PricesCard({
           <>
             {/* Actions row (manual only) */}
             <div className="actionsRow">
-              <button className="primaryBtn" type="button" disabled={disableAll} onClick={onPickPricesFile}>
-                <Plus className="icon16" />
-                Upload File
-              </button>
+              
               
               {/*<button
                 className="secondaryBtn"
@@ -144,11 +148,13 @@ export function PricesCard({
                 </div>
 
                 <div className="pendingRight">
-                  <button className="primaryBtn" type="button" onClick={onUploadPricesFile} disabled={busyPrices !== "idle"}>
+                  <button className="ui-primary-sm-button" type="button" onClick={onUploadPricesFile} disabled={busyPrices !== "idle"}>
+                    <Upload className="icon16" />
                     {busyPrices === "idle" ? "Upload 1 file" : busyLabel("prices")}
                   </button>
 
-                  <button className="secondaryBtn" type="button" onClick={onClearPricesFile} disabled={busyPrices !== "idle"}>
+                  <button className="cp-btn-outline" type="button" onClick={onClearPricesFile} disabled={busyPrices !== "idle"}>
+                    <X className="icon16" />
                     Clear
                   </button>
                 </div>
@@ -156,7 +162,7 @@ export function PricesCard({
             ) : null}
 
             <div className="tableWrap" key={`xls-${refreshTick}`}>
-              <table className="cp-table">
+              <table className="cp-table cp-mobile-records">
                 <thead>
                   <tr>
                     <th className="thActive">Active</th>
@@ -181,11 +187,11 @@ export function PricesCard({
 
                       return (
                         <tr key={`xls-${r.name}`}>
-                          <td className="tdCenter">
+                          <td className="tdCenter" data-label="Active">
                             <input type="checkbox" className="checkbox" defaultChecked />
                           </td>
 
-                          <td>
+                          <td data-label="File Name">
                             <div className="fileCell">
                                <i className="fa-regular fa-xl fa-file-excel text-green-500" aria-hidden="true" />
                               <div className="fileText">
@@ -197,9 +203,9 @@ export function PricesCard({
                             </div>
                           </td>
 
-                          <td className="muted">{fmtDate(r.updated)}</td>
+                          <td className="muted" data-label="Date Uploaded">{fmtDate(r.updated)}</td>
 
-                          <td>
+                          <td data-label="AI Status">
                             <span
                               className={cx(
                                 "badge",
@@ -212,50 +218,56 @@ export function PricesCard({
                             </span>
                           </td>
 
-                          <td className="actionsCell">
-                            {!genExists ? (
+                          <td className="actionsCell" data-label="Actions">
+                            <div className="cp-mobile-actionRow gap-3">
+                              {!genExists ? (
+                                <button
+                                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 text-[12px] font-semibold text-violet-700 transition hover:bg-violet-50 hover:text-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                  type="button"
+                                  disabled={disableAll}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onGeneratePrices(r.name);
+                                  }}
+                                >
+                                  <Wand2 className="h-4 w-4" />
+                                  Generate
+                                </button>
+                              ) : (
+                                <button
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 opacity-60"
+                                  type="button"
+                                  disabled
+                                >
+                                  <Sheet className="h-4 w-4" />
+                                </button>
+                              )}
+
                               <button
-                                className="linkBtn"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 type="button"
                                 disabled={disableAll}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onGeneratePrices(r.name);
+
+                                  const displayName = baseName(r.name);
+                                  const generatedObjectName = r.pricesObjectName;
+                                  const hasGenerated = !!generatedObjectName;
+
+                                  const toDelete: string[] = [r.name];
+                                  if (hasGenerated) toDelete.push(generatedObjectName);
+
+                                  openDeleteModal({
+                                    mode: "prices",
+                                    objectNames: toDelete,
+                                    displayName,
+                                    alsoDeletesGenerated: hasGenerated,
+                                  });
                                 }}
                               >
-                                <Wand2 className="icon16" />
-                                Generate
+                                <Trash2 className="h-4 w-4" />
                               </button>
-                            ) : (
-                              <button className="secondaryBtn-bl" type="button" disabled>
-                                 <i className="fa fa-archive" aria-hidden="true" />
-                              </button>
-                            )}
-
-                            <button
-                              className="dangerBtn"
-                              type="button"
-                              disabled={disableAll}
-                              onClick={(e) => {
-                                e.stopPropagation();
-
-                                const displayName = baseName(r.name);
-                                const generatedObjectName = r.pricesObjectName;
-                                const hasGenerated = !!generatedObjectName;
-
-                                const toDelete: string[] = [r.name];
-                                if (hasGenerated) toDelete.push(generatedObjectName);
-
-                                openDeleteModal({
-                                  mode: "prices",
-                                  objectNames: toDelete,
-                                  displayName,
-                                  alsoDeletesGenerated: hasGenerated,
-                                });
-                              }}
-                            >
-                               <i className="fa-regular fa-trash-can" aria-hidden="true" />
-                            </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -281,8 +293,13 @@ export function PricesCard({
                         <span className={cx("badge", "badgeSlate")}>MISSING</span>
                       </td>
                       <td className="actionsCell">
-                        <button className="linkBtn" type="button" disabled={disableAll} onClick={onPickPricesFile}>
-                          <UploadCloud className="icon16" />
+                        <button
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-3 text-[12px] font-semibold text-sky-700 transition hover:bg-sky-50 hover:text-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={disableAll}
+                          onClick={onPickPricesFile}
+                        >
+                          <UploadCloud className="h-4 w-4" />
                           Select prices
                         </button>
                       </td>

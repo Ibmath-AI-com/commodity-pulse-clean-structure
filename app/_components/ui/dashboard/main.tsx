@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Menu } from "lucide-react";
 
 import { AppShell } from "@/app/_components/app-shell";
 import { normalizeCommodity } from "@/lib/common/options";
@@ -14,6 +15,12 @@ import {
   marketChartOptions,
   makeMarketChartData,
 } from "@/app/_components/ui/dashboard/sections/chart/marketChart.config";
+import {
+  DEFAULT_COMMODITY,
+  getStoredCommodity,
+  setStoredCommodity,
+  subscribeStoredCommodity,
+} from "@/lib/common/commodity-preference";
 
 import type {
   DashboardChartPoint,
@@ -45,8 +52,6 @@ ChartJS.register(
   Filler
 );
 
-const LS_COMMODITY = "ai_commodity_selected";
-
 export default function DashboardMain(props: {
   initialRows: Array<
     Omit<DashboardPrediction, "createdAt"> & { createdAt: string | null }
@@ -76,33 +81,18 @@ export default function DashboardMain(props: {
   const [err, setErr] = useState<string | null>(null);
 
   const [qText, setQText] = useState("");
-  const [commodity, setCommodity] = useState("");
+  const [commodity, setCommodity] = useState(() =>
+    typeof window === "undefined" ? DEFAULT_COMMODITY : getStoredCommodity()
+  );
 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<DashboardPrediction | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => subscribeStoredCommodity((value) => setCommodity(value)), []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const savedCommodity = (
-      window.localStorage.getItem(LS_COMMODITY) ?? ""
-    ).trim();
-
-    if (savedCommodity) {
-      setCommodity(savedCommodity);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const value = commodity.trim();
-
-    if (value) {
-      window.localStorage.setItem(LS_COMMODITY, value);
-    } else {
-      window.localStorage.removeItem(LS_COMMODITY);
-    }
+    setStoredCommodity(commodity || DEFAULT_COMMODITY);
 
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +161,7 @@ export default function DashboardMain(props: {
 
   function clearFilters() {
     setQText("");
-    setCommodity("");
+    setCommodity(DEFAULT_COMMODITY);
   }
 
   function handleCommodityChange(nextRaw: string) {
@@ -179,17 +169,21 @@ export default function DashboardMain(props: {
     if (next === commodity) return;
 
     setCommodity(next);
-
-    try {
-      window.localStorage.setItem(LS_COMMODITY, next.toLowerCase());
-      window.dispatchEvent(new Event("ai:commodity"));
-    } catch {}
   }
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell title="Dashboard" onOpenMobileSidebar={() => setSidebarOpen(true)}>
       <div className="cp-root">
-        <div className="cp-container">
+        <div className="cp-container cp-mobile-layout">
+          {sidebarOpen ? (
+            <button
+              type="button"
+              className="cp-mobile-sidebar-backdrop"
+              aria-label="Close filters"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           <CpFiltersAside
             qText={qText}
             onQTextChange={setQText}
@@ -203,6 +197,8 @@ export default function DashboardMain(props: {
             commodity={commodity}
             handleCommodityChange={handleCommodityChange}
             commodityDisabled={busy}
+            mobileOpen={sidebarOpen}
+            onCloseMobile={() => setSidebarOpen(false)}
           />
 
           <main className="cp-main">
