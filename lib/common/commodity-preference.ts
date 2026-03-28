@@ -1,9 +1,10 @@
 import { normalizeCommodity } from "@/lib/common/options";
 
 export const LS_COMMODITY = "ai_commodity_selected";
-export const DEFAULT_COMMODITY = "sulphur";
+export type CommodityValue = ReturnType<typeof normalizeCommodity>;
+export const DEFAULT_COMMODITY: CommodityValue = "sulphur";
 
-export function getStoredCommodity(fallback = DEFAULT_COMMODITY) {
+export function getStoredCommodity(fallback = DEFAULT_COMMODITY): CommodityValue {
   if (typeof window === "undefined") {
     return normalizeCommodity(fallback);
   }
@@ -11,7 +12,7 @@ export function getStoredCommodity(fallback = DEFAULT_COMMODITY) {
   return normalizeCommodity(window.localStorage.getItem(LS_COMMODITY) ?? fallback);
 }
 
-export function ensureStoredCommodity(fallback = DEFAULT_COMMODITY) {
+export function ensureStoredCommodity(fallback = DEFAULT_COMMODITY): CommodityValue {
   const next = getStoredCommodity(fallback);
 
   if (typeof window !== "undefined" && !window.localStorage.getItem(LS_COMMODITY)) {
@@ -21,7 +22,7 @@ export function ensureStoredCommodity(fallback = DEFAULT_COMMODITY) {
   return next;
 }
 
-export function setStoredCommodity(value: string) {
+export function setStoredCommodity(value: string): CommodityValue {
   const next = normalizeCommodity(value || DEFAULT_COMMODITY);
 
   if (typeof window === "undefined") {
@@ -38,7 +39,7 @@ export function setStoredCommodity(value: string) {
   return next;
 }
 
-export function subscribeStoredCommodity(onChange: (value: string) => void) {
+export function subscribeStoredCommodity(onChange: (value: CommodityValue) => void) {
   if (typeof window === "undefined") {
     return () => {};
   }
