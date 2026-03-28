@@ -32,7 +32,7 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 # Copy standalone server + minimal files
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-#COPY --from=builder /app/public ./public
+COPY --from=builder /app/public ./public
 
 # If you rely on next.config.js at runtime (rare), include it:
 # COPY --from=builder /app/next.config.js ./next.config.js
