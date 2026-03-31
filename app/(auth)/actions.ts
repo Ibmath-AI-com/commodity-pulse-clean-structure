@@ -14,13 +14,23 @@ export async function logIn(formData: FormData) {
     "logIn",
     { recordResponse: true },
     async () => {
+      console.log("LOGIN ACTION START");
+
       const email = String(formData.get("email") ?? "");
       const password = String(formData.get("password") ?? "");
 
+      console.log("LOGIN ACTION INPUT", { email });
+
       try {
+        console.log("BEFORE GET LOGIN CONTROLLER");
         const loginController = getInjection("ILoginController");
+
+        console.log("BEFORE LOGIN CONTROLLER CALL");
         await loginController({ email, password });
+        console.log("AFTER LOGIN CONTROLLER CALL");
       } catch (err) {
+        console.log("LOGIN ACTION ERROR", err);
+
         if (err instanceof InputParseError || err instanceof AuthenticationError) {
           return { error: "Invalid email or password" };
         }
@@ -30,6 +40,7 @@ export async function logIn(formData: FormData) {
         return { error: "Internal error. Please try again later." };
       }
 
+      console.log("BEFORE REDIRECT");
       redirect("/dashboard");
     }
   );
