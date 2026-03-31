@@ -51,24 +51,34 @@ export const loginController =
   ): ILoginController =>
   async (input) =>
     instrumentation.startSpan({ name: "loginController", op: "function" }, async () => {
+      console.log("LOGIN CONTROLLER START");
+
       const parsed = schema.safeParse(input);
       if (!parsed.success) {
+        console.log("LOGIN CONTROLLER PARSE FAILED");
         throw new InputParseError("Invalid login payload", { cause: parsed.error });
       }
 
-      try {
-        const result = await login(parsed.data);
+      console.log("LOGIN CONTROLLER PARSE OK", { email: parsed.data.email });
 
+      try {
+        console.log("BEFORE LOGIN USE CASE");
+        const result = await login(parsed.data);
+        console.log("AFTER LOGIN USE CASE");
+
+        console.log("BEFORE CREATE SESSION COOKIE");
         await sessionService.createSessionCookie({
           sessionToken: result.sessionToken,
           refreshToken: result.refreshToken,
           expiresAt: result.expiresAt,
         });
+        console.log("AFTER CREATE SESSION COOKIE");
 
         return {
           user: result.user,
         };
       } catch (err: unknown) {
+        console.log("LOGIN CONTROLLER ERROR", err);
         throw new AuthenticationError(errorMessage(err), { cause: err });
       }
     });
