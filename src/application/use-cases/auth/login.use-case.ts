@@ -42,8 +42,14 @@ export const loginUseCase =
     tokenService: ITokenService
   ): ILoginUseCase =>
   async (input) => {
+    console.log("LOGIN USE CASE START");
+
     const email = input.email.trim().toLowerCase();
+    console.log("LOGIN USE CASE EMAIL", { email });
+
+    console.log("BEFORE FIND BY EMAIL");
     const user = await userRepo.findByEmail(email);
+    console.log("AFTER FIND BY EMAIL", { found: !!user });
 
     if (!user) throw new AuthenticationError("Invalid credentials");
     if (user.status !== "active") throw new UserDisabledError();
@@ -52,7 +58,9 @@ export const loginUseCase =
       throw new AuthenticationError("Account temporarily locked");
     }
 
+    console.log("BEFORE PASSWORD VERIFY");
     const ok = await passwordHasher.verify(user.passwordHash, input.password);
+    console.log("AFTER PASSWORD VERIFY", { ok });
 
     if (!ok) {
       const nextFailed = user.failedLoginCount + 1;
@@ -61,14 +69,25 @@ export const loginUseCase =
           ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000)
           : null;
 
+      console.log("BEFORE INCREMENT FAILED LOGIN");
       await userRepo.incrementFailedLogin(user.id, lockedUntil);
+      console.log("AFTER INCREMENT FAILED LOGIN");
+
       throw new AuthenticationError("Invalid credentials");
     }
 
+    console.log("BEFORE RESET FAILED LOGIN");
     await userRepo.resetFailedLogin(user.id);
-    await userRepo.touchLastLogin(user.id);
+    console.log("AFTER RESET FAILED LOGIN");
 
+    console.log("BEFORE TOUCH LAST LOGIN");
+    await userRepo.touchLastLogin(user.id);
+    console.log("AFTER TOUCH LAST LOGIN");
+
+    console.log("BEFORE FIND BY ID");
     const freshUser = await userRepo.findById(user.id);
+    console.log("AFTER FIND BY ID", { found: !!freshUser });
+
     if (!freshUser) {
       throw new AuthenticationError("User no longer exists");
     }
@@ -77,6 +96,7 @@ export const loginUseCase =
     const refreshToken = tokenService.generateToken();
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
+    console.log("BEFORE SESSION CREATE");
     await sessionRepo.create({
       userId: freshUser.id,
       sessionTokenHash: tokenService.hashToken(sessionToken),
@@ -85,6 +105,7 @@ export const loginUseCase =
       ipAddress: input.ipAddress ?? null,
       expiresAt,
     });
+    console.log("AFTER SESSION CREATE");
 
     return {
       user: userRepo.toSafeUser(freshUser),
