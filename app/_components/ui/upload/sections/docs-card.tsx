@@ -220,9 +220,9 @@ export function DocsCard({
                     </td>
 
                     <td className="actionsCell" data-label="Actions">
-                      <div className="cp-mobile-actionRow gap-3">
+                      <div className="cp-mobile-actionRow" style={{ gap: "0.9rem" }}>
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                           type="button"
                           disabled={disableAll || !canView}
                           title={canView ? "View generated report" : "Generate AI News Analysis first"}
@@ -235,7 +235,7 @@ export function DocsCard({
                         </button>
 
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
                           type="button"
                           disabled={disableAll || archived}
                           title={archived ? "Already archived" : "Archive"}
@@ -252,7 +252,7 @@ export function DocsCard({
                         </button>
 
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-transparent text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                           type="button"
                           disabled={disableAll}
                           onClick={() => {
