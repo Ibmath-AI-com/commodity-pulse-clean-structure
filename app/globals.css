@@ -360,6 +360,13 @@ body {
   font-size: 2rem;
   font-weight: 600;
 }
+
+@media (max-width: 639px) {
+  .expected-range-value {
+    font-size: 1.5rem;
+  }
+}
+
 .txt-md {
   font-size: 1.125rem;
   font-weight: 500;
@@ -739,6 +746,7 @@ body {
   .dashboard-status-chip {
     flex: 0 0 auto !important;
     min-width: 0 !important;
+    display: none !important;
   }
 
   .dashboard-topbar-commodity {
@@ -764,7 +772,7 @@ body {
   .dashboard-nav-tabs {
     position: relative;
     justify-content: center;
-    padding: 0.1rem 0.75rem;
+    padding: 0.1rem 0.75rem 0.1rem 3.5rem;
     overflow-x: auto;
     white-space: nowrap;
   }
@@ -1342,24 +1350,25 @@ body {
 
   .login-right-section {
     flex-direction: column;
-    align-items: stretch;
-    padding-top: 1.25rem;
-    padding-bottom: 2rem;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    padding-top: 0.35rem;
+    padding-bottom: 1.25rem;
   }
 
   .login-header-section {
-    margin-bottom: 1rem;
+    margin-bottom: 0.4rem;
   }
 
   .login-welcome-heading {
     display: block;
-    margin-bottom: 0.25rem;
-    font-size: 1.85rem;
+    margin-bottom: 0.15rem;
+    font-size: 1.65rem;
   }
 
   .login-welcome-text {
     display: block;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
   }
 
   .login-footer {
@@ -1369,6 +1378,74 @@ body {
     transform: none;
     text-align: center;
     color: #8aaa95;
+  }
+}
+
+@media (max-width: 639px) {
+  .min-h-dvh {
+    min-height: 85dvh !important;
+  }
+
+  .login-left-section {
+    min-height: 85px;
+    max-height: 85px;
+    justify-content: center;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    gap: 0.5rem;
+    overflow: hidden;
+  }
+
+  .login-logo-section {
+    gap: 0.55rem;
+  }
+
+  .login-logo-container {
+    width: 3rem;
+    height: 3rem;
+    padding: 0.45rem;
+  }
+
+  .login-logo-image {
+    height: 60px;
+    width: 60px;
+  }
+
+  .login-brand-name {
+    font-size: 1.75rem;
+    line-height: 1.05;
+  }
+
+  .login-brand-subtitle {
+    font-size: 0.6rem;
+    margin-top: 0.15rem;
+  }
+
+  .login-right-section {
+    padding-top: 0.15rem;
+    padding-bottom: 1rem;
+  }
+
+  .login-form-container {
+    margin-top: -0.75rem;
+  }
+
+  .login-status-indicator {
+    margin-bottom: 0.35rem;
+  }
+
+  .login-welcome-heading {
+    font-size: 1.5rem;
+  }
+
+  .login-welcome-text {
+    font-size: 0.78rem;
+  }
+
+  .login-form-field {
+    margin-bottom: 0.8rem;
   }
 }
 
@@ -3058,6 +3135,8 @@ body {
   }
 
   .cp-mobile-records tr {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 12px;
     border: 1px solid rgba(15, 92, 58, 0.12);
     border-radius: 14px;
@@ -3122,6 +3201,48 @@ body {
     justify-self: center;
   }
 
+  .cp-mobile-records td[data-label="Date Uploaded"] {
+    order: 1;
+  }
+
+  .cp-mobile-records td[data-label="File Name"] {
+    order: 2;
+  }
+
+  .cp-mobile-records td[data-label="News"] {
+    order: 3;
+  }
+
+  .cp-mobile-records td[data-label="AI Status"] {
+    order: 4;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] {
+    order: 5;
+  }
+
+  .cp-mobile-records td[data-label="File Name"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .cp-mobile-records td[data-label="File Name"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding-top: 4px;
+  }
+
+  .cp-mobile-records td[data-label="File Name"] > *:not(style) {
+    width: 100% !important;
+    text-align: left !important;
+    justify-self: stretch !important;
+  }
+
+  .cp-mobile-records td[data-label="File Name"] .fileCell {
+    justify-self: stretch !important;
+  }
+
   .cp-mobile-records .fileName {
     white-space: nowrap;
     overflow: hidden;
@@ -3178,11 +3299,11 @@ body {
   .cp-mobile-records td[data-label="AI Status"] .badge {
     width: fit-content;
     max-width: 100% !important;
-    justify-self: center;
+    justify-self: start;
   }
 
   .cp-mobile-records td[data-label="AI Status"] {
-    align-items: center !important;
+    align-items: start !important;
   }
 
   .cp-mobile-records td[data-label="Actions"] {
@@ -4069,15 +4190,71 @@ body {
         .stat-label { font-size: 10px; color: var(--text-light); text-transform: uppercase; margin-bottom: 5px;}
         .stat-value { font-size: 32px; font-weight: 700; color: var(--primary-blue); }
         .stat-sub { font-size: 11px; color: #999; margin-top: 5px; }
+        .forecast-stats .stat-box .expected-range-value { font-size: 24px; }
+        .forecast-stats .stat-box .stat-sub { font-size: 9px; line-height: 1.3; }
+        .forecast-stats .stat-box .predicted-price-value {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+        .forecast-stats .stat-box .expected-range-value {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+        .forecast-stats .stat-box .predicted-price-unit {
+          display: block !important;
+          margin-top: 2px;
+          margin-left: 0 !important;
+          line-height: 1.1;
+        }
+        .forecast-stats .stat-box .expected-range-unit {
+          display: block !important;
+          margin-top: 2px;
+          margin-left: 0 !important;
+          line-height: 1.1;
+        }
         
         .market-bias {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 4px;
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+              "meta bias"
+              "percentile bias";
             align-items: center;
-            justify-content: center;
-            gap: 15px;
+            gap: 8px 12px;
+        }
+
+        .market-bias .mb-left {
+            grid-area: meta;
+            margin-right: 0 !important;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            text-align: left;
+        }
+
+        .market-bias .mb-title,
+        .market-bias .mb-sub {
+            margin: 0;
+        }
+
+        .market-bias .mb-right {
+            grid-area: percentile;
+            margin-left: 0 !important;
+            text-align: left;
+        }
+
+        .market-bias .mb-center {
+            grid-area: bias;
+            justify-self: end;
+            text-align: right;
         }
 
         .bias-indicator {
@@ -4846,6 +5023,37 @@ body {
   align-items: flex-start;
 }
 
+.analysisHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.analysisEvidenceBtn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.riskAnalysisHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.upload-section-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.report-files-title {
+  text-transform: uppercase;
+}
+
 .actionsRow {
   padding: 0 0 18px 0;
   display: flex;
@@ -4958,21 +5166,180 @@ body {
   text-align: center !important;
 }
 
+.cp-table thead th:nth-child(4),
+.cp-table thead th:nth-child(5) {
+  text-align: center;
+}
+
 .thActions {
   width: 280px;
-  text-align: right;
+  text-align: center;
 }
 
 .tdCenter {
   text-align: center;
 }
 
+.cp-table tbody td[data-label="News"],
+.cp-table tbody td[data-label="AI Status"] {
+  text-align: center;
+}
+
 .actionsCell {
-  text-align: right;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.actionsCell > .cp-mobile-actionRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-action-label {
+  display: inline;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+@media (min-width: 640px) {
+  .actionsCell .upload-action-label {
+    display: inline-block;
+    min-width: 42px;
+    text-align: center;
+  }
+}
+
+.actionsCell .cp-mobile-actionRow button {
+  min-height: 34px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+@media (max-width: 639px) {
+  .cp-mobile-records td[data-label="Active"] {
+    display: none !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] {
+    padding-top: 9px;
+    justify-content: flex-start !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] > *:not(style) {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-self: stretch !important;
+  }
+
+  .cp-mobile-records .cp-mobile-actionRow {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] button {
+    width: auto !important;
+    min-width: fit-content !important;
+    height: 36px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .upload-action-label {
+    display: inline !important;
+  }
+
+  .mainCardTop {
+    align-items: flex-start;
+  }
+
+  .mainCardTop > div:first-child,
+  .mainCardTop > div:first-child .h2,
+  .cp-sidebar-section > h3 {
+    width: 100%;
+    text-align: left;
+  }
+
+  .analysisHeaderTop {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .riskAnalysisHead {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .report-files-mobile td[data-label="Date Uploaded"] {
+    order: 1;
+  }
+
+  .report-files-mobile td[data-label="File Name"] {
+    order: 2;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding-top: 4px;
+  }
+
+  .report-files-mobile td[data-label="File Name"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .report-files-mobile td[data-label="File Name"] > *:not(style) {
+    width: 100% !important;
+    text-align: left !important;
+    justify-self: stretch !important;
+  }
+
+  .report-files-mobile td[data-label="File Name"] .fileCell {
+    justify-self: stretch !important;
+  }
+
+  .report-files-mobile td[data-label="File Name"] .fileSub {
+    display: none !important;
+  }
+
+  .report-files-mobile td[data-label="Size"] {
+    order: 3;
+  }
+
+  .report-files-mobile td[data-label="Open"] {
+    order: 4;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .report-files-mobile td[data-label="Open"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .report-files-mobile td[data-label="Open"] > *:not(style) {
+    width: auto !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    justify-self: center !important;
+  }
+
+  .report-files-mobile td[data-label="Open"] button {
+    width: auto !important;
+    min-width: fit-content !important;
+    height: 36px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
 }
 
 .muted {

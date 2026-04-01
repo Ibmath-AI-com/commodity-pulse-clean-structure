@@ -51,8 +51,8 @@ export function ForecastResultsCard({
       <div className="forecast-stats">
         <div className="stat-box">
           <div className="stat-label">Predicted Price</div>
-          <div className="txt-lg">
-            {predicted} <span className="stat-unit">({tenderUnit})</span>
+          <div className="txt-lg predicted-price-value">
+            {predicted} <span className="stat-unit predicted-price-unit">({tenderUnit})</span>
           </div>
           <div className="stat-sub">
             Recent average: +8.3%{" "}
@@ -62,8 +62,8 @@ export function ForecastResultsCard({
 
         <div className="stat-box">
           <div className="stat-label">Expected Range</div>
-          <div className="txt-lg">
-            {range} <span className="stat-unit">({tenderUnit})</span>
+          <div className="txt-lg expected-range-value">
+            {range} <span className="stat-unit expected-range-unit">({tenderUnit})</span>
           </div>
           <div className="stat-sub">Recent average error: +5.2%</div>
         </div>

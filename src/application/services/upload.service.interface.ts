@@ -2,7 +2,13 @@
 import type { InitUploadResult, DeleteUploadsResult, ArchiveUploadsResult, ListUploadsResult } from "@/src/entities/models/upload";
 
 export type ListUploadsQuery = { commodity: string; region: string };
-export type InitUploadCommand = { commodity: string; region: string; filename: string; contentType: string };
+export type InitUploadCommand = {
+  commodity: string;
+  region: string;
+  filename: string;
+  contentType: string;
+  kind: "doc" | "rdata";
+};
 export type DeleteUploadsCommand = { objectNames: string[] };
 export type ArchiveUploadsCommand = { objectNames: string[] };
 

@@ -12,7 +12,9 @@ import type { DocumentNewsDetails } from "@/src/entities/models/news";
 
 type ControllerInput = {
   commodity: string;
-  sourcePath: string;
+  sourcePath?: string;
+  documentId?: string;
+  fileName?: string;
 };
 
 export type IGetUploadNewsDetailsController = ReturnType<

@@ -93,54 +93,52 @@ export function DetailedBidAnalysis(props: {
 
   return (
     <section className="cp-card pl-4 pr-4 pb-4">
-      <div className="table-header">
+      <div className="analysisHeaderTop">
         <div className="th-left">
           <div className="h2">DETAILED BID ANALYSIS</div>
         </div>
 
-        <div className="th-right">
-          <div className="tt-sub-nav mt-3 mb-2">
-            <button
-              className={cx("tt-sub-navLink", justTab === "drivers" && "tt-navLinkActive")}
-              onClick={() => setJustTab("drivers")}
-              type="button"
-            >
-              DRIVERS
-            </button>
-            <button
-              className={cx("tt-sub-navLink", justTab === "risk" && "tt-navLinkActive")}
-              onClick={() => setJustTab("risk")}
-              type="button"
-            >
-              RISKS
-            </button>
-            <button
-              className={cx("tt-sub-navLink", justTab === "evidence" && "tt-navLinkActive")}
-              onClick={() => setJustTab("evidence")}
-              type="button"
-            >
-              EVIDENCE
-            </button>
-            <button
-              className={cx("tt-sub-navLink", justTab === "cali" && "tt-navLinkActive")}
-              onClick={() => setJustTab("cali")}
-              type="button"
-            >
-              CALI BID
-            </button>
+        <button
+          className="cp-btn-outline analysisEvidenceBtn"
+          type="button"
+          onClick={openAllEvidence}
+          disabled={!rawEvidenceEvents?.length}
+          title="Open all linked events"
+        >
+          <FileText className="h-4 w-4" />
+          Evidence
+        </button>
+      </div>
 
-            <button
-              className="toolbar-btn"
-              type="button"
-              onClick={openAllEvidence}
-              disabled={!rawEvidenceEvents?.length}
-              title="Open all linked events"
-            >
-              <FileText className="h-4 w-4" />
-              Evidence
-            </button>
-          </div>
-        </div>
+      <div className="tt-sub-nav mt-3 mb-2">
+        <button
+          className={cx("tt-sub-navLink", justTab === "drivers" && "tt-navLinkActive")}
+          onClick={() => setJustTab("drivers")}
+          type="button"
+        >
+          DRIVERS
+        </button>
+        <button
+          className={cx("tt-sub-navLink", justTab === "risk" && "tt-navLinkActive")}
+          onClick={() => setJustTab("risk")}
+          type="button"
+        >
+          RISKS
+        </button>
+        <button
+          className={cx("tt-sub-navLink", justTab === "evidence" && "tt-navLinkActive")}
+          onClick={() => setJustTab("evidence")}
+          type="button"
+        >
+          EVIDENCE
+        </button>
+        <button
+          className={cx("tt-sub-navLink", justTab === "cali" && "tt-navLinkActive")}
+          onClick={() => setJustTab("cali")}
+          type="button"
+        >
+          CALI BID
+        </button>
       </div>
 
       {justTab !== "cali" ? (

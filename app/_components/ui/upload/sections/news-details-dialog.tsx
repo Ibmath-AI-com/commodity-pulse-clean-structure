@@ -13,6 +13,21 @@ type Props = {
   loading?: boolean;
 };
 
+function formatShortDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const plain = String(value).trim();
+    return plain.slice(0, 10);
+  }
+
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function EventCard({
   event,
   muted = false,
@@ -27,15 +42,14 @@ function EventCard({
     : direction.includes("bear")
       ? "bg-rose-100 text-rose-700"
       : "bg-amber-100 text-amber-700";
-  const metaLine = [
+  const metaItems = [
     event.eventType || "other",
     event.impactDirection || "unclear",
     event.importanceScore != null ? `Score ${event.importanceScore}` : null,
-    event.eventDate ? `Event ${event.eventDate}` : "Event -",
-    event.expiryDate ? `Expiry ${event.expiryDate}` : "Expiry -",
-  ]
-    .filter(Boolean)
-    .join(" | ");
+    event.eventDate ? `Event ${formatShortDate(event.eventDate)}` : "Event -",
+    event.expiryDate ? `Expiry ${formatShortDate(event.expiryDate)}` : "Expiry -",
+    event.regions?.length ? `Regions ${event.regions.join(", ")}` : null,
+  ].filter(Boolean);
 
   return (
     <div className="border-t border-[#e8efea] first:border-t-0">
@@ -54,11 +68,15 @@ function EventCard({
             <span className={`rounded-full px-2 py-0.5 font-medium ${directionClass}`}>
               {event.impactDirection || "unclear"}
             </span>
-            <span className="text-slate-300">|</span>
-            <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3 w-3" />
-              {metaLine.split(" | ").slice(2).join(" | ")}
-            </span>
+            {metaItems.slice(2).map((item, index) => (
+              <React.Fragment key={`${item}-${index}`}>
+                <span className="text-slate-300">|</span>
+                <span className="inline-flex items-center gap-1">
+                  {index === 0 ? <Clock3 className="h-3 w-3" /> : null}
+                  {item}
+                </span>
+              </React.Fragment>
+            ))}
           </div>
         </div>
 

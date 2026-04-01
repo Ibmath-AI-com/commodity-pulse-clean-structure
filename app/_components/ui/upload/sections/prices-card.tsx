@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Sheet, Trash2, UploadCloud, Wand2, Plus, Upload, X  } from "lucide-react";
+import { Sheet, Trash2, UploadCloud, Wand2, Plus, Upload, X, Loader2 } from "lucide-react";
 import { PricesRow } from "../types/types";
 
 type PricesTab = "web" | "api" | "manual";
@@ -20,6 +20,7 @@ export function PricesCard({
   onUploadPricesFile,
   onClearPricesFile,
   onGeneratePrices,
+  onOpenPriceRecords,
 
   baseName,
   fmtDate,
@@ -42,6 +43,7 @@ export function PricesCard({
   onUploadPricesFile: () => void;
   onClearPricesFile: () => void;
   onGeneratePrices: (sourceObjectName: string) => void;
+  onOpenPriceRecords: (row: PricesRow) => void;
 
   baseName: (path?: string) => string;
   fmtDate: (iso?: string) => string;
@@ -49,6 +51,7 @@ export function PricesCard({
   openDeleteModal: (args: {
     mode: "prices";
     objectNames: string[];
+    sourceFiles?: string[];
     displayName: string;
     alsoDeletesGenerated: boolean;
   }) => void;
@@ -68,13 +71,15 @@ export function PricesCard({
       <div className="">
         <div className="mainCardTop">
           <div>
-            <div className="h2">PRICE CALIBRATION (DATA SOURCE)</div>
+            <div className="h2">PRICE CALIBRATION</div>
+            <div className="upload-section-sub">Uploaded Excel or CSV price files and their generated calibration records.</div>
           </div>
 
           <div className="flex items-center gap-2 justify-start">
             <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickPricesFile}>
                 <Plus className="icon16" />
-                Upload File
+                <span className="sm:hidden">Upload</span>
+                <span className="hidden sm:inline">Upload File</span>
               </button>
           </div>
         </div>
@@ -203,7 +208,7 @@ export function PricesCard({
                             </div>
                           </td>
 
-                          <td className="muted" data-label="Date Uploaded">{fmtDate(r.updated)}</td>
+                          <td className="muted" data-label="Date Uploaded">{fmtDate(r.updatedAt ?? r.updated)}</td>
 
                           <td data-label="AI Status">
                             <span
@@ -219,7 +224,7 @@ export function PricesCard({
                           </td>
 
                           <td className="actionsCell" data-label="Actions">
-                            <div className="cp-mobile-actionRow gap-3">
+                            <div className="cp-mobile-actionRow" style={{ gap: "0.9rem" }}>
                               {!genExists ? (
                                 <button
                                   className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 text-[12px] font-semibold text-violet-700 transition hover:bg-violet-50 hover:text-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -235,43 +240,75 @@ export function PricesCard({
                                 </button>
                               ) : (
                                 <button
-                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 opacity-60"
+                                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 sm:w-auto"
                                   type="button"
-                                  disabled
+                                  title="View price records"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenPriceRecords(r);
+                                  }}
                                 >
                                   <Sheet className="h-4 w-4" />
+                                  <span className="upload-action-label">Records</span>
                                 </button>
                               )}
 
                               <button
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                style={{ marginLeft: "0.45rem" }}
                                 type="button"
                                 disabled={disableAll}
                                 onClick={(e) => {
                                   e.stopPropagation();
 
                                   const displayName = baseName(r.name);
-                                  const generatedObjectName = r.pricesObjectName;
-                                  const hasGenerated = !!generatedObjectName;
-
-                                  const toDelete: string[] = [r.name];
-                                  if (hasGenerated) toDelete.push(generatedObjectName);
-
+                                  const sourceFileName = String(r.sourceFile ?? r.path ?? "").trim();
+                                  const objectFileName = String(r.name ?? "").trim();
+                                  const objectName = `incoming/${String(r.commodity ?? "").trim().toLowerCase()}/rdata/${objectFileName}`;
                                   openDeleteModal({
                                     mode: "prices",
-                                    objectNames: toDelete,
+                                    objectNames: [objectName],
+                                    sourceFiles: [sourceFileName],
                                     displayName,
-                                    alsoDeletesGenerated: hasGenerated,
+                                    alsoDeletesGenerated: false,
                                   });
                                 }}
                               >
                                 <Trash2 className="h-4 w-4" />
+                                <span className="upload-action-label">Delete</span>
                               </button>
                             </div>
                           </td>
                         </tr>
                       );
                     })
+                  ) : busyPrices !== "idle" ? (
+                    <tr>
+                      <td className="tdCenter">
+                        <input type="checkbox" className="checkbox" disabled />
+                      </td>
+                      <td>
+                        <div className="fileCell">
+                          <div className="fileIcon">
+                            <Loader2 className="icon16 animate-spin" />
+                          </div>
+                          <div className="fileText">
+                            <div className="fileName">Loading uploaded prices...</div>
+                            <div className="fileSub">Waiting for the file to appear in the grid</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="muted">-</td>
+                      <td>
+                        <span className={cx("badge", "badgeOrange")}>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          PROCESSING
+                        </span>
+                      </td>
+                      <td className="actionsCell">
+                        <span className="muted">Please wait...</span>
+                      </td>
+                    </tr>
                   ) : (
                     <tr>
                       <td className="tdCenter">

@@ -12,6 +12,7 @@ export type UploadModalState =
       action: "delete" | "archive";
       mode: Mode;
       objectNames: string[];
+      sourceFiles?: string[];
       displayName: string;
       alsoDeletesGenerated: boolean;
     };

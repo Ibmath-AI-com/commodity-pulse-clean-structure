@@ -9,6 +9,7 @@ type InitUploadCommand = {
   region?: string;
   filename: string;
   contentType: string;
+  kind: "doc" | "rdata";
 };
 
 export type IInitUploadUseCase = ReturnType<typeof initUploadUseCase>;
@@ -20,11 +21,13 @@ export const initUploadUseCase =
       if (!cmd?.commodity?.trim()) throw new Error("Missing commodity");
       if (!cmd?.filename?.trim()) throw new Error("Missing filename");
       if (!cmd?.contentType?.trim()) throw new Error("Missing contentType");
+      if (cmd?.kind !== "doc" && cmd?.kind !== "rdata") throw new Error("Missing kind");
 
       return uploadService.init({
         commodity: cmd.commodity.trim().toLowerCase(),
         region: cmd.region ?? "global",
         filename: cmd.filename.trim(),
         contentType: cmd.contentType.trim(),
+        kind: cmd.kind,
       });
     });

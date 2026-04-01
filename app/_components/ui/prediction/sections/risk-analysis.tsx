@@ -41,7 +41,7 @@ export function RiskAnalysisPanel({ risk }: { risk: RiskPayload }) {
   return (
     <div className="cp-card p-4">
       <div className="table-header">
-        <div className="th-left">
+        <div className="riskAnalysisHead">
           <span className="cp-card-head">RISK ANALYSIS</span>
           <MenuIcon size={16} />
         </div>
