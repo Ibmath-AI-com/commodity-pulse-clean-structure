@@ -1382,10 +1382,7 @@ body {
 }
 
 @media (max-width: 639px) {
-  .min-h-dvh {
-    min-height: 85dvh !important;
-  }
-
+ 
   .login-left-section {
     min-height: 85px;
     max-height: 85px;
