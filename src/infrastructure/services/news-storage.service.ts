@@ -1,6 +1,8 @@
 // FILE: src/infrastructure/services/news-storage.service.ts
 import "server-only";
 
+import { postgres } from "@/src/infrastructure/db/postgres.client";
+
 import type { INewsStorageService } from "@/src/application/services/news-storage.service.interface";
 import type { IObjectStorageService } from "@/src/application/services/storage.service.interface";
 import type {
@@ -28,6 +30,23 @@ type RawEvent = {
 };
 
 type RawEnvelope = unknown;
+
+type DbEventRow = {
+  document_id: string | null;
+  commodity: string | null;
+  importance_score: number | string | null;
+  event_type: string | null;
+  headline: string | null;
+  impact_direction: string | null;
+  evidence_summary: string | null;
+  regions: unknown;
+  numbers: unknown;
+  event_date: string | Date | null;
+  retention_type: string | null;
+  active: boolean | null;
+  expiry_date: string | Date | null;
+  archive: boolean | null;
+};
 
 function safeDate(value?: string): Date | null {
   if (!value) return null;
@@ -183,13 +202,21 @@ function stripExt(name: string): string {
   return name.replace(/\.[^.]+$/, "");
 }
 
+function safeDecodePathPart(value: string): string {
+  const normalized = String(value ?? "").replace(/\+/g, " ");
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
 function toCandidateJsonPaths(sourcePath: string, commodity: string): string[] {
   const normalized = sourcePath.replace(/\\/g, "/");
-  const fileName = normalized.split("/").pop() || "";
+  const fileName = safeDecodePathPart(normalized.split("/").pop() || "");
   const base = stripExt(fileName);
 
   return [
-    `clean/${commodity}/eventsignals/${base}_events.json`,
     `clean/${commodity}/doc/${base}.json`,
   ];
 }
@@ -241,7 +268,9 @@ export class NewsStorageService implements INewsStorageService {
 
   async getDocumentNewsSummary(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsSummary> {
     const details = await this.getDocumentNewsDetails(input);
 
@@ -255,9 +284,39 @@ export class NewsStorageService implements INewsStorageService {
 
   async getDocumentNewsDetails(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsDetails> {
-    const candidates = toCandidateJsonPaths(input.sourcePath, input.commodity);
+    const commodity = String(input.commodity ?? "").trim().toLowerCase();
+    const documentId = String(input.documentId ?? "").trim();
+    const fileName = String(input.fileName ?? "").trim();
+
+    if (commodity) {
+      const dbDetails = await this.readDocumentNewsFromDb({
+        commodity,
+        documentId,
+        fileName,
+      });
+
+      if (dbDetails) {
+        return dbDetails;
+      }
+    }
+
+    const sourcePath = String(input.sourcePath ?? "").trim();
+    if (!sourcePath) {
+      return {
+        documentId: documentId || "unknown_document",
+        active: 0,
+        inactive: 0,
+        total: 0,
+        activeEvents: [],
+        inactiveEvents: [],
+      };
+    }
+
+    const candidates = toCandidateJsonPaths(sourcePath, commodity);
 
     for (const objectKey of candidates) {
       try {
@@ -284,5 +343,81 @@ export class NewsStorageService implements INewsStorageService {
       activeEvents: [],
       inactiveEvents: [],
     };
+  }
+
+  private async readDocumentNewsFromDb(input: {
+    commodity: string;
+    documentId?: string;
+    fileName?: string;
+  }): Promise<DocumentNewsDetails | null> {
+    const commodity = input.commodity;
+    const documentId = String(input.documentId ?? "").trim();
+    const fileName = String(input.fileName ?? "").trim();
+
+    const fileNameNoPlus = fileName.replace(/\+/g, " ");
+
+    let query = `
+      select
+        me.document_id,
+        me.commodity,
+        me.importance_score,
+        me.event_type,
+        me.headline,
+        me.impact_direction,
+        me.evidence_summary,
+        me.regions,
+        me.numbers,
+        me.event_date,
+        me.retention_type,
+        me.active,
+        me.expiry_date,
+        me.archive
+      from public.market_events me
+      left join public.documents d on d.document_id = me.document_id
+      where lower(me.commodity) = $1
+    `;
+    const params: unknown[] = [commodity];
+
+    if (documentId) {
+      params.push(documentId);
+      query += ` and me.document_id = $2`;
+    } else if (fileName) {
+      params.push(fileName, fileNameNoPlus);
+      query += ` and lower(d.filename) in (lower($2), lower($3))`;
+    } else {
+      return null;
+    }
+
+    query += ` order by me.event_date desc nulls last, me.created_at desc nulls last`;
+
+    const res = await postgres.query<DbEventRow>(query, params);
+    if (!res.rows.length) return null;
+
+    const events = res.rows
+      .map((row) =>
+        mapEvent({
+          document_id: row.document_id ?? undefined,
+          commodity: row.commodity ?? undefined,
+          importance_score: row.importance_score ?? undefined,
+          event_type: row.event_type ?? undefined,
+          headline: row.headline ?? undefined,
+          impact_direction: row.impact_direction ?? undefined,
+          evidence_summary: row.evidence_summary ?? undefined,
+          regions: row.regions ?? undefined,
+          numbers: row.numbers ?? undefined,
+          event_date:
+            row.event_date instanceof Date ? row.event_date.toISOString() : row.event_date ?? undefined,
+          retention_type: row.retention_type ?? undefined,
+          active: row.active ?? undefined,
+          expiry_date:
+            row.expiry_date instanceof Date ? row.expiry_date.toISOString() : row.expiry_date ?? undefined,
+          archive: row.archive ?? undefined,
+        })
+      )
+      .filter((event): event is NewsEvent => event !== null);
+
+    if (!events.length) return null;
+
+    return summarize(documentId || events[0].documentId || "unknown_document", events);
   }
 }

@@ -8,11 +8,15 @@ import type {
 export interface INewsStorageService {
   getDocumentNewsSummary(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsSummary>;
 
   getDocumentNewsDetails(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsDetails>;
 }

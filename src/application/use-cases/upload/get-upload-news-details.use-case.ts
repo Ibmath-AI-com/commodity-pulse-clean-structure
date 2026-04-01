@@ -6,7 +6,9 @@ import type { DocumentNewsDetails } from "@/src/entities/models/news";
 export interface IGetUploadNewsDetailsUseCase {
   execute(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsDetails>;
 }
 
@@ -15,7 +17,9 @@ export class GetUploadNewsDetailsUseCase implements IGetUploadNewsDetailsUseCase
 
   async execute(input: {
     commodity: string;
-    sourcePath: string;
+    sourcePath?: string;
+    documentId?: string;
+    fileName?: string;
   }): Promise<DocumentNewsDetails> {
     return this.newsStorageService.getDocumentNewsDetails(input);
   }

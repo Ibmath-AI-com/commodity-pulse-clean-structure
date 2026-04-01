@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { Eye } from "lucide-react";
 
 import type { ReportSourceFile } from "@/app/(protected)/report/actions";
 
@@ -42,13 +42,13 @@ export function ReportFilesTableCard({
     <section className="cp-card">
       <div className="mainCardTop">
         <div>
-          <div className="h2">{title}</div>
-          <div className="sub">{description}</div>
+          <div className="h2 report-files-title">{title}</div>
+          <div className="upload-section-sub">{description}</div>
         </div>
       </div>
 
       <div className="tableWrap">
-        <table className="cp-table cp-mobile-records">
+        <table className="cp-table cp-mobile-records report-files-mobile">
           <thead>
             <tr>
               <th>File Name</th>
@@ -79,13 +79,13 @@ export function ReportFilesTableCard({
 
                   <td className="actionsCell" data-label="Open">
                     <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800"
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                       type="button"
                       disabled={openingKey === `${row.bucket}:${row.objectName}`}
                       onClick={() => onOpenFile(row)}
                     >
-                      <ExternalLink className="h-4 w-4" />
-                      {openingKey === `${row.bucket}:${row.objectName}` ? "Opening..." : "Open PDF"}
+                      <Eye className="h-4 w-4" />
+                      <span>{openingKey === `${row.bucket}:${row.objectName}` ? "Opening..." : "View"}</span>
                     </button>
                   </td>
                 </tr>

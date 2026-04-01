@@ -7,9 +7,11 @@ import { AppShell } from "@/app/_components/app-shell";
 import {
   listUploadsAction,
   initUploadAction,
+  upsertUploadedDocumentRowAction,
   deleteUploadsAction,
   archiveUploadsAction,
   getUploadNewsDetailsAction,
+  getUploadPriceRecordsAction,
 } from "@/app/(protected)/upload/actions";
 
 import { useSearchParams } from "next/navigation";
@@ -17,6 +19,7 @@ import { useSearchParams } from "next/navigation";
 import { UploadSidebar } from "./sections/upload-sidebar";
 import { DocsCard } from "./sections/docs-card";
 import { PricesCard } from "./sections/prices-card";
+import { PricesRecordsDialog } from "./sections/prices-records-dialog";
 import { DeleteModal } from "./sections/delete-modal";
 import { ArchiveModal } from "./sections/archive-modal"
 import { NewsDetailsDialog } from "./sections/news-details-dialog";
@@ -32,6 +35,7 @@ import type {
   UploadKind,
 } from "@/src/entities/models/upload";
 import type { DocumentNewsDetails } from "@/src/entities/models/news";
+import type { UploadPriceRecord } from "@/app/(protected)/upload/actions";
 
 import type { Busy, Mode, UploadModalState } from "./types/types";
 import {
@@ -124,6 +128,21 @@ function isAllowedPricesFile(f: File) {
   return n.endsWith(".csv") || n.endsWith(".xls") || n.endsWith(".xlsx");
 }
 
+function sameFileToken(a?: string, b?: string) {
+  return String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+}
+
+function sameUploadRow(a: UploadListItem, b: UploadListItem) {
+  return (
+    a.kind === b.kind &&
+    sameFileToken(a.commodity, b.commodity) &&
+    (sameFileToken(a.sourceFile, b.sourceFile) ||
+      sameFileToken(a.sourcePath, b.sourcePath) ||
+      sameFileToken(a.path, b.path) ||
+      sameFileToken(a.name, b.name))
+  );
+}
+
 export default function UploadMain() {
   const [commodity, setCommodity] = useState<string>(() => {
     if (typeof window === "undefined") return DEFAULT_COMMODITY;
@@ -135,6 +154,7 @@ export default function UploadMain() {
   const [introOpen, setIntroOpen] = useState(true);
 
   const [rows, setRows] = useState<UploadListItem[]>([]);
+  const [pendingRows, setPendingRows] = useState<UploadListItem[]>([]);
   const [eventSignalsExists, setEventSignalsExists] = useState(false);
 
   const [busyReport, setBusyReport] = useState<Busy>("idle");
@@ -156,10 +176,16 @@ export default function UploadMain() {
   const [selectedRow, setSelectedRow] = useState<UploadListItem | null>(null);
   const [selectedNews, setSelectedNews] = useState<DocumentNewsDetails | null>(null);
   const [isNewsPending, startNewsTransition] = useTransition();
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [selectedPriceRow, setSelectedPriceRow] = useState<UploadListItem | null>(null);
+  const [selectedPriceRecords, setSelectedPriceRecords] = useState<UploadPriceRecord[]>([]);
+  const [isPricesPending, startPricesTransition] = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const reportInputRef = useRef<HTMLInputElement | null>(null);
   const pricesInputRef = useRef<HTMLInputElement | null>(null);
+  const refreshRequestSeqRef = useRef(0);
+  const latestAppliedRefreshRef = useRef(0);
 
   const searchParams = useSearchParams();
   const [deleteModal, setDeleteModal] = useState<UploadModalState>(null);
@@ -226,8 +252,9 @@ export default function UploadMain() {
     setStoredCommodity(commodity || DEFAULT_COMMODITY);
   }, [commodity]);
 
-  async function refreshList() {
-    if (listBusy) return;
+  async function refreshList(options?: { force?: boolean }) {
+    if (listBusy && !options?.force) return null;
+    const requestSeq = ++refreshRequestSeqRef.current;
     setListBusy(true);
 
     try {
@@ -236,23 +263,40 @@ export default function UploadMain() {
         region: region.trim().toLowerCase(),
       });
 
+      if (requestSeq < latestAppliedRefreshRef.current) {
+        return null;
+      }
+
       if (!out.ok) {
+        latestAppliedRefreshRef.current = requestSeq;
         setRows([]);
         setEventSignalsExists(false);
         setMsgReport(out.error);
         setMsgPrices(out.error);
-        return;
+        return null;
       }
 
-      setRows(Array.isArray(out.items) ? out.items : []);
+      const items = Array.isArray(out.items) ? out.items : [];
+      latestAppliedRefreshRef.current = requestSeq;
+      setRows(items);
+      setPendingRows((current) =>
+        current.filter((pending) => !items.some((item) => sameUploadRow(item, pending)))
+      );
       setEventSignalsExists(Boolean(out.eventSignalsExists));
       setRefreshTick((v) => v + 1);
+      return items;
     } catch (e) {
+      if (requestSeq < latestAppliedRefreshRef.current) {
+        return null;
+      }
+
+      latestAppliedRefreshRef.current = requestSeq;
       const err = e instanceof Error ? e.message : "List failed";
       setRows([]);
       setEventSignalsExists(false);
       setMsgReport(err);
       setMsgPrices(err);
+      return null;
     } finally {
       setListBusy(false);
     }
@@ -266,6 +310,7 @@ export default function UploadMain() {
   function openDeleteModal(args: {
     mode: Mode;
     objectNames: string[];
+    sourceFiles?: string[];
     displayName: string;
     alsoDeletesGenerated: boolean;
   }) {
@@ -289,16 +334,25 @@ export default function UploadMain() {
     setArchiveModal(null)
   } 
 
-  async function deleteFilesNow(objectNames: string[], mode: Mode, displayName: string) {
+  async function deleteFilesNow(
+    objectNames: string[],
+    mode: Mode,
+    displayName: string,
+    sourceFiles?: string[]
+  ) {
     const names = objectNames.map((s) => String(s ?? "").trim()).filter(Boolean);
     if (!names.length) return;
 
     const setMsg = mode === "report" ? setMsgReport : setMsgPrices;
-    setMsg("");
+    setMsg(`Deleting ${displayName}...`);
     setBusyFor(mode, "verifying");
 
     try {
-      const out: DeleteUploadsResult = await deleteUploadsAction({ objectNames: names });
+      const out: DeleteUploadsResult = await deleteUploadsAction({
+        objectNames: names,
+        sourceFiles,
+        mode,
+      });
 
       if (!out.ok) {
         setMsg(out.error);
@@ -306,7 +360,8 @@ export default function UploadMain() {
       }
 
       setMsg(`✓ Deleted: ${displayName}`);
-      await refreshList();
+      setBusyFor(mode, "listing");
+      await refreshList({ force: true });
     } catch (e) {
       const err = e instanceof Error ? e.message : "Delete failed";
       setMsg(err);
@@ -332,6 +387,7 @@ export default function UploadMain() {
       }
 
       setMsg(`✓ Archive: ${displayName}`);
+      setBusyFor(mode, "listing");
       await refreshList();
     } catch (e) {
       const err = e instanceof Error ? e.message : "Archive failed";
@@ -350,7 +406,9 @@ export default function UploadMain() {
       try {
         const details = await getUploadNewsDetailsAction({
           commodity: row.commodity,
-          sourcePath: row.path,
+          sourcePath: row.sourcePath ?? row.path,
+          documentId: row.documentId,
+          fileName: row.name,
         });
         setSelectedNews(details);
       } catch {
@@ -359,28 +417,72 @@ export default function UploadMain() {
     });
   }
 
+  async function openSourceFile(objectName: string) {
+    if (!objectName) return;
+
+    try {
+      const target = `/report/view?objectName=${encodeURIComponent(objectName)}`;
+      window.open(target, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      const err = e instanceof Error ? e.message : "Failed to open source file";
+      setMsgReport(err);
+    }
+  }
+
+  function openPriceRecords(row: UploadListItem) {
+    setSelectedPriceRow(row);
+    setSelectedPriceRecords([]);
+    setPriceDialogOpen(true);
+
+    startPricesTransition(async () => {
+      try {
+        const rows = await getUploadPriceRecordsAction({
+          commodity: row.commodity,
+          sourceFile: row.sourceFile ?? row.path,
+        });
+        setSelectedPriceRecords(Array.isArray(rows) ? rows : []);
+      } catch {
+        setSelectedPriceRecords([]);
+      }
+    });
+  }
+
+  const displayRows = useMemo(() => {
+    return [
+      ...rows,
+      ...pendingRows.filter((pending) => !rows.some((row) => sameUploadRow(row, pending))),
+    ];
+  }, [rows, pendingRows]);
+
   const pdfRows = useMemo(() => {
-    return rows
+    return displayRows
       .filter((r) => isPdfRow(r) && kindFromItem(r) === "doc")
       .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
-  }, [rows]);
+  }, [displayRows]);
   
 
   const excelRows = useMemo(() => {
-    return rows
+    return displayRows
       .filter((r) => isExcelRow(r) && kindFromItem(r) === "rdata")
       .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
-  }, [rows]);
+  }, [displayRows]);
 
   async function uploadFile(mode: Mode) {
     const files = mode === "report" ? reportFiles : pricesFile ? [pricesFile] : [];
     if (!files.length) return;
+    const uploadedFiles = [...files];
 
     const setMsg = mode === "report" ? setMsgReport : setMsgPrices;
     setMsg("");
     setBusyFor(mode, "init");
 
     try {
+      if (mode === "report") {
+        setGeneratingReportFor(uploadedFiles[0]?.name ?? null);
+      } else {
+        setGeneratingPricesFor(uploadedFiles[0]?.name ?? null);
+      }
+
       for (const file of files) {
         const contentType = inferContentType(file);
 
@@ -389,6 +491,7 @@ export default function UploadMain() {
           region,
           filename: file.name,
           contentType,
+          kind: mode === "report" ? "doc" : "rdata",
         });
 
         if (!initOut.ok) {
@@ -408,17 +511,60 @@ export default function UploadMain() {
           const text = await putRes.text().catch(() => "");
           throw new Error(`Upload failed (HTTP ${putRes.status}): ${text || "Unknown error"}`);
         }
+
+        if (mode === "report") {
+          await upsertUploadedDocumentRowAction({
+            commodity,
+            filename: file.name,
+            sourceKey: initOut.objectName,
+          });
+        }
+
+        const pendingRow: UploadListItem =
+          mode === "report"
+            ? {
+                documentId: "",
+                commodity,
+                path: initOut.objectName,
+                sourcePath: initOut.objectName,
+                name: file.name,
+                processingStatus: "completed",
+                generationStatus: "running",
+                updatedAt: new Date().toISOString(),
+                kind: "doc",
+                reportExists: false,
+              }
+            : {
+                documentId: "",
+                commodity,
+                path: file.name,
+                sourceFile: file.name.replace(/ /g, "+"),
+                name: file.name,
+                processingStatus: "processed",
+                updatedAt: new Date().toISOString(),
+                kind: "rdata",
+                pricesExists: true,
+              };
+
+        setPendingRows((current) => {
+          const next = current.filter((row) => !sameUploadRow(row, pendingRow));
+          next.unshift(pendingRow);
+          return next;
+        });
       }
 
       setMsg(`✓ Uploaded ${files.length} file(s)`);
       if (mode === "report") setReportFiles([]);
       else setPricesFile(null);
 
-      await refreshList();
+      setBusyFor(mode, "listing");
+      await refreshList({ force: true });
     } catch (e) {
       const err = e instanceof Error ? e.message : "Upload failed";
       setMsg(err);
     } finally {
+      if (mode === "report") setGeneratingReportFor(null);
+      else setGeneratingPricesFor(null);
       setBusyFor(mode, "idle");
     }
   }
@@ -529,6 +675,7 @@ export default function UploadMain() {
               busyLabel={busyLabel}
               cx={cx}
               onOpenNews={openNews}
+              onOpenSourceFile={openSourceFile}
             />
 
             <PricesCard
@@ -542,6 +689,7 @@ export default function UploadMain() {
               onUploadPricesFile={() => uploadFile("prices")}
               onClearPricesFile={() => setPricesFile(null)}
               onGeneratePrices={async () => {}}
+              onOpenPriceRecords={openPriceRecords}
               baseName={baseName}
               fmtDate={fmtDate}
               openDeleteModal={openDeleteModal}
@@ -554,9 +702,10 @@ export default function UploadMain() {
 
         <DeleteModal
           state={deleteModal}
+          busy={deleteModal?.mode === "report" ? busyReport !== "idle" : busyPrices !== "idle"}
           onClose={closeDeleteModal}
-          onConfirmDelete={async ({ objectNames, mode, displayName }) => {
-            await deleteFilesNow(objectNames, mode, displayName);
+          onConfirmDelete={async ({ objectNames, sourceFiles, mode, displayName }) => {
+            await deleteFilesNow(objectNames, mode, displayName, sourceFiles);
           }}
         />
 
@@ -580,6 +729,20 @@ export default function UploadMain() {
           fileName={selectedRow?.name || ""}
           data={selectedNews}
           loading={isNewsPending}
+        />
+
+        <PricesRecordsDialog
+          open={priceDialogOpen}
+          onOpenChange={(open) => {
+            setPriceDialogOpen(open);
+            if (!open) {
+              setSelectedPriceRow(null);
+              setSelectedPriceRecords([]);
+            }
+          }}
+          fileName={selectedPriceRow?.name || ""}
+          rows={selectedPriceRecords}
+          loading={isPricesPending}
         />
       </div>
     </AppShell>

@@ -3,11 +3,17 @@
 import type { DocumentNewsSummary } from "@/src/entities/models/news";
 
 export type UploadKind = "doc" | "rdata" | "general";
+export type UploadGenerationStatus = "running" | "success" | "failed";
 
 export type UploadListItem = {
   documentId: string;
   commodity: string;
   path: string;
+  sourcePath?: string;
+  processingStatus?: string;
+  generationStatus?: UploadGenerationStatus;
+  sourceFile?: string;
+  recordCount?: number;
   updatedAt?: string;
   newsSummary?: DocumentNewsSummary;
   name: string; // full object name

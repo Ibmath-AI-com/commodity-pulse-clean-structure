@@ -15,6 +15,7 @@ type ControllerInput = {
   region?: string;
   filename: string;
   contentType: string;
+  kind: "doc" | "rdata";
 };
 
 export type IInitUploadController = ReturnType<typeof initUploadController>;
@@ -38,11 +39,13 @@ export const initUploadController =
       if (!input?.commodity?.trim()) throw new Error("Missing commodity");
       if (!input?.filename?.trim()) throw new Error("Missing filename");
       if (!input?.contentType?.trim()) throw new Error("Missing contentType");
+      if (input?.kind !== "doc" && input?.kind !== "rdata") throw new Error("Missing kind");
 
       return initUpload({
         commodity: input.commodity.trim().toLowerCase(),
         region: input.region ?? "global",
         filename: input.filename.trim(),
         contentType: input.contentType.trim(),
+        kind: input.kind,
       });
     });

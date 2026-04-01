@@ -88,8 +88,8 @@ export default function LoginPage() {
               <Image
                 src="/logo_white.png"
                 alt="Cali Commodity logo"
-                width={50}
-                height={50}
+                width={80}
+                height={80}
                 className="login-logo-image"
               />
             </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
               </div>
 
               <h1 className="login-welcome-heading">Welcome back</h1>
-              <p className="login-welcome-text">
+              <p className="login-welcome-text mb-10">
                 Sign in to access your forecasts and market intelligence
               </p>
             </div>
@@ -169,7 +169,7 @@ export default function LoginPage() {
                   htmlFor="email"
                   className="ui-form-label"
                 >
-                  Email Address
+                  Email
                 </label>
                 <div className="ui-form-control-wrap">
                   <span className="ui-form-control-icon">

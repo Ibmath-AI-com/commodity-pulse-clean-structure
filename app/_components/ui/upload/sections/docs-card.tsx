@@ -27,6 +27,7 @@ export function DocsCard({
   openDeleteModal,
   openArchiveModal,
   onOpenNews,
+  onOpenSourceFile,
 
   baseName,
   fmtDate,
@@ -63,43 +64,19 @@ export function DocsCard({
   }) => void;
 
   onOpenNews: (row: DocsRow) => void;
+  onOpenSourceFile: (objectName: string) => void;
 
   baseName: (path?: string) => string;
   fmtDate: (iso?: string) => string;
   busyLabel: (mode: "report") => string;
   cx: (...classes: Array<string | false | null | undefined>) => string;
 }) {
-  function openViewer(objectName: string) {
-    const w = 1100;
-    const h = 820;
-
-    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - w) / 2));
-    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - h) / 2));
-
-    const features = [
-      "popup=yes",
-      `width=${w}`,
-      `height=${h}`,
-      `left=${left}`,
-      `top=${top}`,
-      "scrollbars=yes",
-      "resizable=yes",
-      "noopener=yes",
-      "noreferrer=yes",
-    ].join(",");
-
-    window.open(
-      `/report/view?objectName=${encodeURIComponent(objectName)}`,
-      "report_view_popup",
-      features
-    );
-  }
-
   return (
     <section className="cp-card">
       <div className="mainCardTop">
         <div>
           <div className="h2">MARKET INTELLIGENCE</div>
+          <div className="upload-section-sub">Uploaded PDF reports, generated summaries, and linked market news.</div>
         </div>
 
         <div className="flex items-center gap-2 justify-start">
@@ -116,7 +93,8 @@ export function DocsCard({
 
           <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickReportFile}>
             <Plus className="icon16" />
-            Upload File
+            <span className="sm:hidden">Upload</span>
+            <span className="hidden sm:inline">Upload File</span>
           </button>
         </div>
       </div>
@@ -168,15 +146,20 @@ export function DocsCard({
               pdfRows.map((r) => {
                 const archived = isArchivedName(r.name);
                 const genExists = !!r.reportExists;
-                const isProcessing = generatingReportFor === r.name && busyReport !== "idle";
+                const isProcessing =
+                  r.generationStatus === "running" ||
+                  (!r.generationStatus && generatingReportFor === r.name && busyReport !== "idle");
+                const hasFailed = r.generationStatus === "failed";
 
                 const status = isProcessing
                 ? { text: "PROCESSING", cls: "badgeOrange", spinning: true }
                 : genExists
                   ? { text: "GENERATED", cls: "badgeGreen", spinning: false }
-                  : { text: "PROCESSING", cls: "badgeOrange", spinning: true };
+                  : hasFailed
+                    ? { text: "FAILED", cls: "badgeOrange", spinning: false }
+                    : { text: "PROCESSING", cls: "badgeOrange", spinning: true };
 
-                const canView = !!r.reportObjectName;
+                const canView = !!r.reportExists && !!r.reportObjectName;
                 const activeNews = r.newsSummary?.active ?? 0;
                 const totalNews = r.newsSummary?.total ?? 0;
 
@@ -222,49 +205,54 @@ export function DocsCard({
                     <td className="actionsCell" data-label="Actions">
                       <div className="cp-mobile-actionRow" style={{ gap: "0.9rem" }}>
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                           type="button"
                           disabled={disableAll || !canView}
-                          title={canView ? "View generated report" : "Generate AI News Analysis first"}
+                          title={canView ? "View generated report" : "Report unavailable"}
                           onClick={() => {
                             if (!r.reportObjectName) return;
-                            openViewer(r.reportObjectName);
+                            onOpenSourceFile(r.reportObjectName);
                           }}
                         >
                           <Eye className="h-4 w-4" />
+                          <span className="upload-action-label">View</span>
                         </button>
 
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                          style={{ marginLeft: "0.45rem" }}
                           type="button"
                           disabled={disableAll || archived}
                           title={archived ? "Already archived" : "Archive"}
                           onClick={() => {
                             openArchiveModal({
                               mode: "report",
-                              objectNames: [r.path],
+                              objectNames: [r.sourcePath ?? r.path],
                               displayName: baseName(r.name),
                               alsoDeletesGenerated: false,
                             });
                           }}
                         >
                           <Archive className="h-4 w-4" />
+                          <span className="upload-action-label">Archive</span>
                         </button>
 
                         <button
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-transparent text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-transparent px-3 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                          style={{ marginLeft: "0.45rem" }}
                           type="button"
                           disabled={disableAll}
                           onClick={() => {
                             openDeleteModal({
                               mode: "report",
-                              objectNames: [r.path],
+                              objectNames: [r.sourcePath ?? r.path],
                               displayName: baseName(r.name),
                               alsoDeletesGenerated: false,
                             });
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
+                          <span className="upload-action-label">Delete</span>
                         </button>
                       </div>
                     </td>

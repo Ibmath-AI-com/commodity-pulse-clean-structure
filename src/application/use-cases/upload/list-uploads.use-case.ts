@@ -50,7 +50,9 @@ export const listUploadsUseCase =
 
         const newsSummary = await newsStorageService.getDocumentNewsSummary({
           commodity: item.commodity,
-          sourcePath: item.path,
+          sourcePath: item.sourcePath ?? item.path,
+          documentId: item.documentId,
+          fileName: item.name,
         });
 
         return {

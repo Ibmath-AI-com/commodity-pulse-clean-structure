@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 export type Mode = "report" | "prices";
 
 export type DeleteModalState =
@@ -8,19 +10,23 @@ export type DeleteModalState =
       open: true;
       mode: Mode;
       objectNames: string[];
+      sourceFiles?: string[];
       displayName: string;
       alsoDeletesGenerated?: boolean;
     };
 
 export function DeleteModal({
   state,
+  busy = false,
   onClose,
   onConfirmDelete,
 }: {
   state: DeleteModalState;
+  busy?: boolean;
   onClose: () => void;
   onConfirmDelete: (payload: {
     objectNames: string[];
+    sourceFiles?: string[];
     mode: "report" | "prices";
     displayName: string;
   }) => Promise<void>;
@@ -29,16 +35,18 @@ export function DeleteModal({
 
   return (
     <div className="modalRoot" role="dialog" aria-modal="true">
-      <div className="modalBackdrop" onClick={onClose} aria-hidden="true" />
+      <div className="modalBackdrop" onClick={busy ? undefined : onClose} aria-hidden="true" />
       <div className="modalCenter">
         <div className="modalCard">
           <div className="modalHeader">
             <div className="modalTitle">DELETE FILE</div>
-            <div className="modalSub">This action can’t be undone.</div>
+            <div className="modalSub">
+              {busy ? "Deleting file and refreshing list..." : "This action can&apos;t be undone."}
+            </div>
           </div>
 
           <div className="modalBody">
-            You’re about to delete: <b>{state.displayName}</b>
+            You&apos;re about to delete: <b>{state.displayName}</b>
             {state.alsoDeletesGenerated ? (
               <div className="modalHint">
                 This will also delete the generated output linked to this file.
@@ -47,24 +55,33 @@ export function DeleteModal({
           </div>
 
           <div className="modalFooter">
-            <button className="secondaryBtn" type="button" onClick={onClose}>
+            <button className="secondaryBtn" type="button" onClick={onClose} disabled={busy}>
               CANCEL
             </button>
 
             <button
               className="dangerBtnSolid"
               type="button"
+              disabled={busy}
               onClick={async () => {
                 const m = state;
-                onClose();
                 await onConfirmDelete({
                   objectNames: m.objectNames,
+                  sourceFiles: m.sourceFiles,
                   mode: m.mode,
                   displayName: m.displayName,
                 });
+                onClose();
               }}
             >
-              DELETE
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  DELETING...
+                </>
+              ) : (
+                "DELETE"
+              )}
             </button>
           </div>
         </div>

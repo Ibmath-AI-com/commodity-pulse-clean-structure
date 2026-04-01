@@ -12,16 +12,7 @@ export class Argon2PasswordHasher implements IPasswordHasher {
     });
   }
 
- async verify(hashedValue: string, plainValue: string): Promise<boolean> {
-    console.log("VERIFY INPUT", {
-      hashPrefix: hashedValue?.slice(0, 20),
-      plainLength: plainValue?.length,
-    });
-
-    const ok = await argon2.verify(hashedValue, plainValue);
-
-    console.log("VERIFY RESULT", { ok });
-
-    return ok;
+  async verify(passwordHash: string, password: string): Promise<boolean> {
+    return argon2.verify(passwordHash, password);
   }
 }
