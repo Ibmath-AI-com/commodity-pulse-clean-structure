@@ -267,52 +267,7 @@ export class OSUploadPageService implements IUploadPageService {
         );
       });
 
-    const bucketItems: UploadListItem[] = await Promise.all(
-      raw.map(async (it) => {
-        if ("documentId" in it && "path" in it) {
-          return it as UploadListItem;
-        }
-
-        const filename = it.name.split("/").pop() || "";
-        const base = stripExt(filename);
-
-        const isDoc = it.name.includes(`/doc/`);
-        const isRdata = it.name.includes(`/rdata/`);
-
-        const reportObjectName = `clean/${commodity}/doc/${base}.json`;
-        const pricesObjectName = it.name;
-
-        const [reportExists, pricesExists] = await Promise.all([
-          isDoc
-            ? this.ost
-                .objectExists("active", reportObjectName, { timeoutMs: 15000 })
-                .catch(() => false)
-            : Promise.resolve(false),
-          isRdata
-            ? Promise.resolve(true)
-            : this.ost
-                .objectExists("active", pricesObjectName, { timeoutMs: 15000 })
-                .catch(() => false),
-        ]);
-
-        return {
-          documentId: buildDocumentId(it.name),
-          commodity,
-          path: it.name,
-          name: filename,
-          size: it.size,
-          contentType: it.contentType,
-          updatedAt: it.updated,
-          kind: isDoc ? "doc" : "rdata",
-          reportExists,
-          reportObjectName: isDoc ? reportObjectName : undefined,
-          pricesExists,
-          pricesObjectName: isRdata ? pricesObjectName : undefined,
-        } as UploadListItem;
-      })
-    );
-
-    const items = bucketItems;
+    const items = raw;
 
     return {
       ok: true,

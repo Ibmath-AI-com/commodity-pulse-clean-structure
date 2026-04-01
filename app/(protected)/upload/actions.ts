@@ -255,7 +255,7 @@ export async function deleteUploadsAction(input: {
   objectNames: string[];
   sourceFiles?: string[];
   mode?: "report" | "prices";
-}) {
+}): Promise<import("@/src/entities/models/upload").DeleteUploadsResult> {
   const { getInjection } = await import("@/di/container");
 
   const instrumentation = getInjection("IInstrumentationService");
