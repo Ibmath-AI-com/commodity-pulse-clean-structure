@@ -41,12 +41,12 @@ export function DeleteModal({
           <div className="modalHeader">
             <div className="modalTitle">DELETE FILE</div>
             <div className="modalSub">
-              {busy ? "Deleting file and refreshing list..." : "This action can't be undone."}
+              {busy ? "Deleting file and refreshing list..." : "This action can&apos;t be undone."}
             </div>
           </div>
 
           <div className="modalBody">
-            You're about to delete: <b>{state.displayName}</b>
+            You&apos;re about to delete: <b>{state.displayName}</b>
             {state.alsoDeletesGenerated ? (
               <div className="modalHint">
                 This will also delete the generated output linked to this file.

@@ -32,6 +32,37 @@ type SortState = {
   dir: "asc" | "desc";
 };
 
+function SortHead({
+  label,
+  sortKey,
+  sort,
+  onToggle,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onToggle: (key: SortKey) => void;
+}) {
+  const active = sort.key === sortKey;
+
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-left text-inherit"
+      onClick={() => onToggle(sortKey)}
+    >
+      <span>{label}</span>
+      {active ? (
+        sort.dir === "asc" ? (
+          <ArrowUpAZ className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowDownAZ className="h-3.5 w-3.5" />
+        )
+      ) : null}
+    </button>
+  );
+}
+
 function fmtNumber(value: number | null) {
   if (value == null || Number.isNaN(value)) return "-";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
@@ -137,32 +168,6 @@ export function PricesRecordsDialog({
     );
   }
 
-  function SortHead({
-    label,
-    sortKey,
-  }: {
-    label: string;
-    sortKey: SortKey;
-  }) {
-    const active = sort.key === sortKey;
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-left text-inherit"
-        onClick={() => toggleSort(sortKey)}
-      >
-        <span>{label}</span>
-        {active ? (
-          sort.dir === "asc" ? (
-            <ArrowUpAZ className="h-3.5 w-3.5" />
-          ) : (
-            <ArrowDownAZ className="h-3.5 w-3.5" />
-          )
-        ) : null}
-      </button>
-    );
-  }
-
   if (!open) return null;
 
   return (
@@ -200,18 +205,18 @@ export function PricesRecordsDialog({
               <table className="cp-table">
                 <thead>
                   <tr>
-                    <th><SortHead label="Commodity Group" sortKey="commodityGroup" /></th>
-                    <th><SortHead label="Basis" sortKey="basis" /></th>
-                    <th><SortHead label="Region" sortKey="region" /></th>
-                    <th><SortHead label="Market Label" sortKey="marketLabel" /></th>
-                    <th><SortHead label="Currency" sortKey="currency" /></th>
-                    <th><SortHead label="Unit" sortKey="unit" /></th>
-                    <th><SortHead label="Price Date" sortKey="priceDate" /></th>
-                    <th><SortHead label="Timing" sortKey="timing" /></th>
-                    <th><SortHead label="Price" sortKey="price" /></th>
-                    <th><SortHead label="Change" sortKey="change" /></th>
-                    <th><SortHead label="Price Low" sortKey="priceLow" /></th>
-                    <th><SortHead label="Price High" sortKey="priceHigh" /></th>
+                    <th><SortHead label="Commodity Group" sortKey="commodityGroup" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Basis" sortKey="basis" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Region" sortKey="region" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Market Label" sortKey="marketLabel" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Currency" sortKey="currency" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Unit" sortKey="unit" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Price Date" sortKey="priceDate" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Timing" sortKey="timing" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Price" sortKey="price" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Change" sortKey="change" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Price Low" sortKey="priceLow" sort={sort} onToggle={toggleSort} /></th>
+                    <th><SortHead label="Price High" sortKey="priceHigh" sort={sort} onToggle={toggleSort} /></th>
                   </tr>
                 </thead>
                 <tbody>
