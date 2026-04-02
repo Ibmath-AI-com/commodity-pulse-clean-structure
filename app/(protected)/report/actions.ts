@@ -28,6 +28,15 @@ export type ReportSourceReadUrlResult = {
   expiresMinutes: number;
 };
 
+function decodeReportFileName(value: string) {
+  const normalized = String(value ?? "").replace(/\+/g, " ");
+  try {
+    return decodeURIComponent(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
 export async function listReportFilesAction(input: { commodity: string }): Promise<ListReportFilesResult> {
   const { getInjection } = await import("@/di/container");
   const instrumentation = getInjection("IInstrumentationService");
@@ -47,14 +56,16 @@ export async function listReportFilesAction(input: { commodity: string }): Promi
           storage.listObjects("archive", { prefix: archivePrefix, endsWith: ".pdf", maxResults: 200 }, { timeoutMs: 15000 }),
         ]);
 
-        const mapRow = (bucket: "active" | "archive") => (it: { name: string; updated?: string; size?: string | number; contentType?: string }) => ({
-          bucket,
-          objectName: it.name,
-          name: it.name.split("/").filter(Boolean).pop() ?? it.name,
-          updated: it.updated,
-          size: it.size,
-          contentType: it.contentType,
-        });
+        const mapRow =
+          (bucket: "active" | "archive") =>
+          (it: { name: string; updated?: string; size?: string | number; contentType?: string }) => ({
+            bucket,
+            objectName: it.name,
+            name: decodeReportFileName(it.name.split("/").filter(Boolean).pop() ?? it.name),
+            updated: it.updated,
+            size: it.size,
+            contentType: it.contentType,
+          });
 
         return {
           ok: true,

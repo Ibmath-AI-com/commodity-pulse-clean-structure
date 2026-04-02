@@ -78,8 +78,8 @@ export function PricesCard({
           <div className="flex items-center gap-2 justify-start">
             <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickPricesFile}>
                 <Plus className="icon16" />
-                <span className="sm:hidden">Upload</span>
-                <span className="hidden sm:inline">Upload File</span>
+                <span className="upload-btn-label-mobile">Upload</span>
+                <span className="upload-btn-label-desktop">Upload File</span>
               </button>
           </div>
         </div>
@@ -224,7 +224,7 @@ export function PricesCard({
                           </td>
 
                           <td className="actionsCell" data-label="Actions">
-                            <div className="cp-mobile-actionRow" style={{ gap: "0.9rem" }}>
+                            <div className="cp-mobile-actionRow">
                               {!genExists ? (
                                 <button
                                   className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 text-[12px] font-semibold text-violet-700 transition hover:bg-violet-50 hover:text-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -255,7 +255,6 @@ export function PricesCard({
 
                               <button
                                 className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                                style={{ marginLeft: "0.45rem" }}
                                 type="button"
                                 disabled={disableAll}
                                 onClick={(e) => {

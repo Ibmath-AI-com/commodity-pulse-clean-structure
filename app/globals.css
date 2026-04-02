@@ -361,6 +361,12 @@ body {
   font-weight: 600;
 }
 
+@media (min-width: 1024px) {
+  .forecast-stats .stat-box .expected-range-value {
+    font-size: 2.35rem;
+  }
+}
+
 @media (max-width: 639px) {
   .expected-range-value {
     font-size: 1.5rem;
@@ -3350,8 +3356,12 @@ body {
 
   .cp-mobile-records td[data-label="Actions"] button {
     flex: 0 0 auto !important;
-    width: 36px;
+    width: auto !important;
+    min-width: fit-content !important;
     height: 36px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
   }
 
   .cp-mobile-records td[data-label="File Name"] .fileText {
@@ -3632,6 +3642,48 @@ body {
   .users-page-table td[data-label="Role"] .badge,
   .users-page-table td[data-label="Status"] .badge {
     flex-wrap: wrap;
+  }
+
+  .users-page-table td[data-label="Actions"] {
+    align-items: center !important;
+    display: flex !important;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-top: 9px;
+  }
+
+  .users-page-table td[data-label="Actions"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .users-page-table td[data-label="Actions"] > *:not(style) {
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    justify-self: start !important;
+  }
+
+  .users-page-table .users-page-actionsCell .cp-mobile-actionRow {
+    display: inline-flex;
+    width: auto;
+    min-width: max-content;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .users-page-table .users-page-actionsCell .cp-mobile-actionRow button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: fit-content !important;
+    height: 36px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    font-size: 11px !important;
   }
 }
 
@@ -5047,6 +5099,14 @@ body {
   color: #64748b;
 }
 
+.upload-btn-label-mobile {
+  display: none;
+}
+
+.upload-btn-label-desktop {
+  display: inline;
+}
+
 .report-files-title {
   text-transform: uppercase;
 }
@@ -5202,6 +5262,10 @@ body {
 }
 
 @media (min-width: 640px) {
+  .cp-mobile-records .cp-mobile-actionRow {
+    gap: 8px;
+  }
+
   .actionsCell .upload-action-label {
     display: inline-block;
     min-width: 42px;
@@ -5216,6 +5280,14 @@ body {
 }
 
 @media (max-width: 639px) {
+  .upload-btn-label-mobile {
+    display: inline;
+  }
+
+  .upload-btn-label-desktop {
+    display: none;
+  }
+
   .cp-mobile-records td[data-label="Active"] {
     display: none !important;
   }
@@ -5237,10 +5309,10 @@ body {
   }
 
   .cp-mobile-records .cp-mobile-actionRow {
-    width: 100%;
-    min-width: 0;
-    flex-wrap: wrap;
-    gap: 8px;
+    width: auto;
+    min-width: max-content;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .cp-mobile-records td[data-label="Actions"] button {
@@ -5249,6 +5321,7 @@ body {
     height: 36px;
     padding-left: 10px !important;
     padding-right: 10px !important;
+    font-size: 11px !important;
   }
 
   .upload-action-label {
@@ -5336,6 +5409,64 @@ body {
     height: 36px;
     padding-left: 10px !important;
     padding-right: 10px !important;
+  }
+}
+
+@media (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+  .cp-mobile-records td[data-label="Actions"],
+  .users-page-table td[data-label="Actions"] {
+    align-items: center !important;
+    display: flex !important;
+    gap: 4px !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-top: 8px;
+  }
+
+  .cp-mobile-records td[data-label="Actions"]::before,
+  .users-page-table td[data-label="Actions"]::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] > *:not(style),
+  .users-page-table td[data-label="Actions"] > *:not(style) {
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    justify-self: start !important;
+  }
+
+  .cp-mobile-records .cp-mobile-actionRow,
+  .users-page-table .users-page-actionsCell .cp-mobile-actionRow {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: max-content !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] button,
+  .users-page-table .users-page-actionsCell .cp-mobile-actionRow button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    height: 34px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .cp-mobile-records td[data-label="Actions"] button svg,
+  .users-page-table .users-page-actionsCell .cp-mobile-actionRow button svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 auto !important;
   }
 }
 

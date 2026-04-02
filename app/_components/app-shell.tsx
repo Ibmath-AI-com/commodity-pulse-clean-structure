@@ -244,11 +244,6 @@ export function AppShell(props: {
                   </>
                 ) : null}
 
-                <Link className="tt-menuItem" href="/settings" onClick={() => setUserOpen(false)}>
-                  <Settings className="tt-menuIcon" />
-                  Settings
-                </Link>
-
                 <div className="tt-menuDivider" />
 
                 <form action={logOut}>
