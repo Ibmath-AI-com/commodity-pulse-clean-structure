@@ -16,6 +16,14 @@ export interface IUserRepository {
     passwordHash: string;
     mustChangePassword: boolean;
   }): Promise<void>;
+  updateById(input: {
+    userId: string;
+    name: string;
+    email: string;
+    isAdmin: boolean;
+    status: User["status"];
+  }): Promise<User>;
+  deleteById(userId: string): Promise<void>;
   incrementFailedLogin(userId: string, lockedUntil: Date | null): Promise<void>;
   resetFailedLogin(userId: string): Promise<void>;
   touchLastLogin(userId: string): Promise<void>;

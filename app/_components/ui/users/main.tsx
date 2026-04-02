@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Shield, UserPlus, Users, X } from "lucide-react";
+import { Pencil, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
 
 import { AppShell } from "@/app/_components/app-shell";
-import { createUserAction, listUsersAction, type UsersListItem } from "@/app/(protected)/users/actions";
+import {
+  createUserAction,
+  deleteUserAction,
+  listUsersAction,
+  updateUserAction,
+  type UsersListItem,
+} from "@/app/(protected)/users/actions";
 
 function fmtDate(iso?: string | null) {
   if (!iso) return "-";
@@ -27,6 +33,14 @@ export default function UsersMain() {
   const [isPending, startTransition] = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addUserOpen, setAddUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UsersListItem | null>(null);
+
+  const formOpen = addUserOpen || Boolean(editingUser);
+
+  function resetEditor() {
+    setAddUserOpen(false);
+    setEditingUser(null);
+  }
 
   async function loadUsers() {
     setIsLoading(true);
@@ -108,49 +122,100 @@ export default function UsersMain() {
                 <button
                   type="button"
                   className="users-page-headerBtn"
-                  onClick={() => setAddUserOpen((open) => !open)}
+                  onClick={() => {
+                    setError("");
+                    setSuccess("");
+                    if (formOpen && !editingUser) {
+                      resetEditor();
+                      return;
+                    }
+                    setEditingUser(null);
+                    setAddUserOpen(true);
+                  }}
                 >
                   <UserPlus className="icon16" />
-                  {addUserOpen ? "Close" : "Add User"}
+                  {formOpen && !editingUser ? "Close" : "Add User"}
                 </button>
               </div>
 
-              {addUserOpen ? (
+              {formOpen ? (
                 <form
                   className="grid gap-4 px-4 pb-4 md:grid-cols-2"
                   action={(formData) =>
                     startTransition(async () => {
                       setError("");
                       setSuccess("");
-                      const out = await createUserAction(formData);
+                      const out = editingUser ? await updateUserAction(formData) : await createUserAction(formData);
                       if (!out.ok) {
                         setError(out.error);
                         return;
                       }
-                      setSuccess(`User created: ${out.user.email}`);
-                      setAddUserOpen(false);
+                      setSuccess(
+                        editingUser ? `User updated: ${out.user.email}` : `User created: ${out.user.email}`
+                      );
+                      resetEditor();
                       await loadUsers();
                     })
                   }
                 >
+                  {editingUser ? <input type="hidden" name="userId" value={editingUser.id} /> : null}
+
                   <div className="cp-form-group">
                     <label className="ui-form-label">Full Name</label>
-                    <input className="ui-form-control" name="name" type="text" placeholder="Full name" required />
+                    <input
+                      className="ui-form-control"
+                      name="name"
+                      type="text"
+                      placeholder="Full name"
+                      required
+                      defaultValue={editingUser?.name ?? ""}
+                    />
                   </div>
 
                   <div className="cp-form-group">
                     <label className="ui-form-label">Email</label>
-                    <input className="ui-form-control" name="email" type="email" placeholder="name@company.com" required />
+                    <input
+                      className="ui-form-control"
+                      name="email"
+                      type="email"
+                      placeholder="name@company.com"
+                      required
+                      defaultValue={editingUser?.email ?? ""}
+                    />
                   </div>
 
-                  <div className="cp-form-group">
-                    <label className="ui-form-label">Temporary Password</label>
-                    <input className="ui-form-control" name="password" type="password" placeholder="At least 8 characters" required />
-                  </div>
+                  {editingUser ? (
+                    <div className="cp-form-group">
+                      <label className="ui-form-label">Status</label>
+                      <select
+                        className="ui-form-control ui-form-select"
+                        name="status"
+                        defaultValue={editingUser.status}
+                      >
+                        <option value="active">Active</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="cp-form-group">
+                      <label className="ui-form-label">Temporary Password</label>
+                      <input
+                        className="ui-form-control"
+                        name="password"
+                        type="password"
+                        placeholder="At least 8 characters"
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div className="cp-form-group">
                     <label className="ui-form-label">Access</label>
-                    <select className="ui-form-control ui-form-select" name="role" defaultValue="user">
+                    <select
+                      className="ui-form-control ui-form-select"
+                      name="role"
+                      defaultValue={editingUser ? (editingUser.isAdmin ? "admin" : "user") : "user"}
+                    >
                       <option value="user">User</option>
                       <option value="admin">Admin</option>
                     </select>
@@ -158,13 +223,13 @@ export default function UsersMain() {
 
                   <div className="users-page-submitRow md:col-span-2 flex items-center justify-start gap-3">
                     <button className="users-page-formBtn" type="submit" disabled={isPending}>
-                      <UserPlus className="icon16" />
-                      {isPending ? "Creating..." : "Create User"}
+                      {editingUser ? <Pencil className="icon16" /> : <UserPlus className="icon16" />}
+                      {isPending ? (editingUser ? "Saving..." : "Creating...") : editingUser ? "Update User" : "Create User"}
                     </button>
                     <button
                       type="button"
                       className="cp-btn-outline"
-                      onClick={() => setAddUserOpen(false)}
+                      onClick={() => resetEditor()}
                       disabled={isPending}
                     >
                       <X className="icon16" />
@@ -184,6 +249,7 @@ export default function UsersMain() {
                       <th>Status</th>
                       <th>Last Login</th>
                       <th>Created</th>
+                      <th className="thActions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -211,11 +277,58 @@ export default function UsersMain() {
                           </td>
                           <td className="muted" data-label="Last Login">{fmtDate(user.lastLoginAt)}</td>
                           <td className="muted" data-label="Created">{fmtDate(user.createdAt)}</td>
+                          <td className="actionsCell users-page-actionsCell" data-label="Actions">
+                            <div className="cp-mobile-actionRow">
+                              <button
+                                type="button"
+                                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                disabled={isPending}
+                                onClick={() => {
+                                  setError("");
+                                  setSuccess("");
+                                  setAddUserOpen(false);
+                                  setEditingUser(user);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-transparent px-3 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                disabled={isPending}
+                                onClick={() => {
+                                  const confirmed = window.confirm(`Delete user ${user.email}?`);
+                                  if (!confirmed) return;
+
+                                  startTransition(async () => {
+                                    setError("");
+                                    setSuccess("");
+                                    const formData = new FormData();
+                                    formData.set("userId", user.id);
+                                    const out = await deleteUserAction(formData);
+                                    if (!out.ok) {
+                                      setError(out.error);
+                                      return;
+                                    }
+                                    if (editingUser?.id === user.id) {
+                                      resetEditor();
+                                    }
+                                    setSuccess(`User deleted: ${user.email}`);
+                                    await loadUsers();
+                                  });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="muted tdCenter">
+                        <td colSpan={7} className="muted tdCenter">
                           {isLoading ? "Loading..." : "No users found"}
                         </td>
                       </tr>

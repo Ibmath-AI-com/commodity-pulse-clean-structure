@@ -93,8 +93,8 @@ export function DocsCard({
 
           <button className="ui-primary-sm-button" type="button" disabled={disableAll} onClick={onPickReportFile}>
             <Plus className="icon16" />
-            <span className="sm:hidden">Upload</span>
-            <span className="hidden sm:inline">Upload File</span>
+            <span className="upload-btn-label-mobile">Upload</span>
+            <span className="upload-btn-label-desktop">Upload File</span>
           </button>
         </div>
       </div>
@@ -203,7 +203,7 @@ export function DocsCard({
                     </td>
 
                     <td className="actionsCell" data-label="Actions">
-                      <div className="cp-mobile-actionRow" style={{ gap: "0.9rem" }}>
+                      <div className="cp-mobile-actionRow">
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                           type="button"
@@ -220,7 +220,6 @@ export function DocsCard({
 
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-3 text-slate-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                          style={{ marginLeft: "0.45rem" }}
                           type="button"
                           disabled={disableAll || archived}
                           title={archived ? "Already archived" : "Archive"}
@@ -239,7 +238,6 @@ export function DocsCard({
 
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-transparent px-3 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                          style={{ marginLeft: "0.45rem" }}
                           type="button"
                           disabled={disableAll}
                           onClick={() => {

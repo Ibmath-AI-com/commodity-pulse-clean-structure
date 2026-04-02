@@ -106,6 +106,34 @@ export class PostgresUserRepository implements IUserRepository {
     );
   }
 
+  async updateById(input: {
+    userId: string;
+    name: string;
+    email: string;
+    isAdmin: boolean;
+    status: User["status"];
+  }): Promise<User> {
+    const res = await this.pool.query<DbUserRow>(
+      `
+      update app_user
+      set name = $2,
+          email = $3,
+          is_admin = $4,
+          status = $5,
+          updated_at = now()
+      where id = $1
+      returning *
+      `,
+      [input.userId, input.name, input.email, input.isAdmin, input.status]
+    );
+
+    return mapUser(res.rows[0]);
+  }
+
+  async deleteById(userId: string): Promise<void> {
+    await this.pool.query(`delete from app_user where id = $1`, [userId]);
+  }
+
   async incrementFailedLogin(userId: string, lockedUntil: Date | null): Promise<void> {
     await this.pool.query(
       `

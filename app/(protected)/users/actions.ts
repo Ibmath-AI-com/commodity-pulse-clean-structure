@@ -22,6 +22,14 @@ export type CreateUserResult =
   | { ok: true; user: UsersListItem }
   | { ok: false; error: string };
 
+export type UpdateUserResult =
+  | { ok: true; user: UsersListItem }
+  | { ok: false; error: string };
+
+export type DeleteUserResult =
+  | { ok: true; deletedUserId: string }
+  | { ok: false; error: string };
+
 async function requireAdminUser() {
   const user = await getCurrentUserFromSession();
   if (!user) redirect("/login");
@@ -106,5 +114,81 @@ export async function createUserAction(formData: FormData): Promise<CreateUserRe
     const crashReporterService = getInjection("ICrashReporterService");
     crashReporterService.report(err);
     return { ok: false, error: "Failed to create user." };
+  }
+}
+
+export async function updateUserAction(formData: FormData): Promise<UpdateUserResult> {
+  const currentUser = await requireAdminUser();
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "user").trim().toLowerCase();
+  const status = String(formData.get("status") ?? "active").trim().toLowerCase();
+  const isAdmin = role === "admin";
+
+  if (!userId) return { ok: false, error: "User ID is required." };
+  if (!name) return { ok: false, error: "Name is required." };
+  if (!email || !email.includes("@")) return { ok: false, error: "Valid email is required." };
+  if (role !== "user" && role !== "admin") return { ok: false, error: "Role must be user or admin." };
+  if (status !== "active" && status !== "disabled") {
+    return { ok: false, error: "Status must be active or disabled." };
+  }
+  if (currentUser.id === userId && status === "disabled") {
+    return { ok: false, error: "You cannot disable your own account." };
+  }
+
+  try {
+    const userRepo = getInjection("IUserRepository");
+    const existing = await userRepo.findById(userId);
+    if (!existing) return { ok: false, error: "User not found." };
+
+    const duplicate = await userRepo.findByEmail(email);
+    if (duplicate && duplicate.id !== userId) {
+      return { ok: false, error: "A user with this email already exists." };
+    }
+
+    const updated = await userRepo.updateById({
+      userId,
+      name,
+      email,
+      isAdmin,
+      status: status as "active" | "disabled",
+    });
+
+    return { ok: true, user: toRow(userRepo.toSafeUser(updated)) };
+  } catch (err) {
+    const crashReporterService = getInjection("ICrashReporterService");
+    crashReporterService.report(err);
+    return { ok: false, error: "Failed to update user." };
+  }
+}
+
+export async function deleteUserAction(formData: FormData): Promise<DeleteUserResult> {
+  const currentUser = await requireAdminUser();
+  const userId = String(formData.get("userId") ?? "").trim();
+
+  if (!userId) return { ok: false, error: "User ID is required." };
+  if (currentUser.id === userId) {
+    return { ok: false, error: "You cannot delete your own account." };
+  }
+
+  try {
+    const userRepo = getInjection("IUserRepository");
+    const sessionRepo = getInjection("ISessionRepository");
+
+    const existing = await userRepo.findById(userId);
+    if (!existing) return { ok: false, error: "User not found." };
+
+    await sessionRepo.revokeAllByUserId(userId, "admin_delete");
+    const { postgres } = await import("@/src/infrastructure/db/postgres.client");
+    await postgres.query(`delete from auth_session where user_id = $1`, [userId]);
+    await userRepo.deleteById(userId);
+
+    return { ok: true, deletedUserId: userId };
+  } catch (err) {
+    const crashReporterService = getInjection("ICrashReporterService");
+    crashReporterService.report(err);
+    return { ok: false, error: "Failed to delete user." };
   }
 }

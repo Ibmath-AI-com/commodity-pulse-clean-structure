@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Info, FileText, XCircle } from "lucide-react";
+import { getPredictionActiveNewsAction, type PredictionActiveNewsItem } from "@/app/(protected)/prediction/actions";
 
 import { cx } from "@/app/_components/utils";
 import { AssessmentLegendTooltip } from "../tooltip/implication-legend";
@@ -13,10 +14,6 @@ import type {
   Direction,
 } from "../types/types";
 
-/**
- * UI-only types (keep OUT of entities).
- * If you want, move these to: app/_components/ui/prediction/types.ts
- */
 export type JustTab = "drivers" | "risk" | "evidence" | "cali";
 
 export type CaliBidRow = {
@@ -41,6 +38,7 @@ function statusClsFromDir(d: Direction) {
 }
 
 export function DetailedBidAnalysis(props: {
+  commodity: string;
   justTab: JustTab;
   setJustTab: (t: JustTab) => void;
 
@@ -52,18 +50,9 @@ export function DetailedBidAnalysis(props: {
   evidenceRows: EvidenceRow[];
 
   caliRows: CaliBidRow[];
-
-  rawEvidenceEvents: Array<{
-    headline?: string;
-    impact_direction?: string;
-    importance_score?: number;
-    event_type?: string;
-    event_date?: string;
-    regions?: string[];
-    evidence_summary?: string;
-  }>;
 }) {
   const {
+    commodity,
     justTab,
     setJustTab,
     legendOpen,
@@ -72,23 +61,37 @@ export function DetailedBidAnalysis(props: {
     risksRows,
     evidenceRows,
     caliRows,
-    rawEvidenceEvents,
   } = props;
 
   const [evOpen, setEvOpen] = React.useState(false);
   const [evTitle, setEvTitle] = React.useState<string>("");
-  const [evItems, setEvItems] = React.useState<typeof rawEvidenceEvents>([]);
+  const [evItems, setEvItems] = React.useState<PredictionActiveNewsItem[]>([]);
+  const [evLoading, setEvLoading] = React.useState(false);
+  const [evError, setEvError] = React.useState("");
 
-  function openAllEvidence() {
-    setEvTitle("All linked events");
-    setEvItems(Array.isArray(rawEvidenceEvents) ? rawEvidenceEvents : []);
+  async function openAllEvidence() {
+    setEvTitle("Active linked news");
+    setEvItems([]);
+    setEvError("");
+    setEvLoading(true);
     setEvOpen(true);
+
+    try {
+      const items = await getPredictionActiveNewsAction({ commodity });
+      setEvItems(items);
+    } catch (error) {
+      setEvError(error instanceof Error ? error.message : "Failed to load active news.");
+    } finally {
+      setEvLoading(false);
+    }
   }
 
   function closeEvidence() {
     setEvOpen(false);
     setEvTitle("");
     setEvItems([]);
+    setEvLoading(false);
+    setEvError("");
   }
 
   return (
@@ -102,7 +105,7 @@ export function DetailedBidAnalysis(props: {
           className="cp-btn-outline analysisEvidenceBtn"
           type="button"
           onClick={openAllEvidence}
-          disabled={!rawEvidenceEvents?.length}
+          disabled={!commodity}
           title="Open all linked events"
         >
           <FileText className="h-4 w-4" />
@@ -300,7 +303,7 @@ export function DetailedBidAnalysis(props: {
                     : a.includes("slight") || a.includes("recommended")
                     ? "status-warning"
                     : "status-info";
-                    
+
                 const highlight = a.includes("optimal");
 
                 return (
@@ -333,173 +336,109 @@ export function DetailedBidAnalysis(props: {
         </table>
       )}
 
-      {/* Evidence modal (global) */}
       {evOpen ? (
         <div className="fixed inset-0 z-[12000]">
           <div
-            className="absolute inset-0"
-            style={{ background: "rgba(9,30,66,0.35)" }}
+            className="absolute inset-0 bg-[rgba(15,92,58,0.08)] backdrop-blur-[1px]"
             onClick={closeEvidence}
             aria-hidden="true"
           />
 
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div style={{ width: "100%", maxWidth: 980, background: "#fff", border: "1px solid #dfe1e6" }}>
-              <div style={{ padding: "14px 16px", background: "#e9ecef", borderBottom: "1px solid #dfe1e6" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, letterSpacing: 0.3 }}>EVIDENCE</div>
-                    <div style={{ marginTop: 2, fontSize: 12, color: "#42526e" }}>
-                      <span style={{ fontWeight: 700, color: "#172b4d" }}>{evTitle || "—"}</span>
-                    </div>
-                    <div style={{ marginTop: 2, fontSize: 12, color: "#7a869a" }}>
-                      {evItems.length ? `Showing ${evItems.length} linked events` : "No linked events available."}
-                    </div>
+            <div className="flex max-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[30px] bg-[#fbfdfb] shadow-[0_18px_48px_rgba(15,92,58,0.10)]">
+              <div className="flex items-center justify-between border-b border-[#e5ebe7] bg-[#f1f4f2] px-5 py-3.5 sm:px-6">
+                <div className="min-w-0">
+                  <div className="text-[15px] font-semibold text-slate-900">EVIDENCE</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    <span className="font-semibold text-slate-700">{evTitle || "-"}</span>
                   </div>
-
-                  <button className="toolbar-btn" type="button" onClick={closeEvidence} title="Close">
-                    <XCircle className="h-4 w-4" />
-                    Close
-                  </button>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {evLoading
+                      ? "Loading active news..."
+                      : evItems.length
+                      ? `Showing ${evItems.length} active news items`
+                      : "No active news available."}
+                  </div>
                 </div>
+
+                <button className="cp-btn-outline" type="button" onClick={closeEvidence} title="Close">
+                  <XCircle className="h-4 w-4" />
+                  Close
+                </button>
               </div>
 
-              <div style={{ padding: 12, maxHeight: "72vh", overflowY: "auto" }}>
-                {evItems.length ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className="flex-1 overflow-auto p-5 sm:p-6">
+                {evLoading ? (
+                  <div className="flex items-center justify-center px-6 py-16 text-sm text-slate-500">
+                    Loading active news...
+                  </div>
+                ) : evError ? (
+                  <div className="flex items-center justify-center px-6 py-16 text-sm text-rose-600">
+                    {evError}
+                  </div>
+                ) : evItems.length ? (
+                  <div className="flex flex-col gap-4">
                     {evItems.map((e, i) => {
-                      const impact = (e?.impact_direction ?? "neutral").toString().toLowerCase();
-                      const impactTone =
-                        impact.includes("bear") || impact === "down"
-                          ? { bg: "#ffebe6", fg: "#de350b", bd: "#ffbdad" }
-                          : impact.includes("bull") || impact === "up"
-                          ? { bg: "#deebff", fg: "#019664ff", bd: "#22d499ff" }
-                          : impact.includes("risk")
-                          ? { bg: "#fffae6", fg: "#ff8b00", bd: "#ffe2bd" }
-                          : { bg: "#f4f5f7", fg: "#42526e", bd: "#dfe1e6" };
+                      const impact = (e.impactDirection ?? "neutral").toLowerCase();
+                      const impactTone = impact.includes("bear")
+                        ? "bg-rose-100 text-rose-700"
+                        : impact.includes("bull")
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-700";
 
                       return (
-                        <div key={i} style={{ border: "1px solid #dfe1e6", background: "#fff", padding: 12 }}>
-                          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                height: 22,
-                                padding: "0 8px",
-                                borderRadius: 999,
-                                border: `1px solid ${impactTone.bd}`,
-                                background: impactTone.bg,
-                                color: impactTone.fg,
-                                fontSize: 11,
-                                fontWeight: 800,
-                                letterSpacing: 0.4,
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {(e?.impact_direction ?? "neutral").toString().toUpperCase()}
+                        <div
+                          key={`${e.documentId}-${e.headline}-${i}`}
+                          className="overflow-hidden rounded-[24px] border border-[#e3ebe5] bg-white shadow-[0_10px_24px_rgba(15,92,58,0.05)]"
+                        >
+                          <div className="flex items-start justify-between gap-3 border-b border-[#e8efea] bg-[#f1f4f2] px-4 py-3.5">
+                            <div className="min-w-0">
+                              <div className="truncate text-[14px] font-semibold text-slate-900">{e.headline}</div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                Source document: <span className="font-medium text-slate-700">{e.documentName}</span>
+                              </div>
+                            </div>
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${impactTone}`}>
+                              {e.impactDirection || "unclear"}
                             </span>
-
-                            {typeof e?.importance_score === "number" ? (
-                              <span
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  height: 22,
-                                  padding: "0 8px",
-                                  borderRadius: 999,
-                                  border: "1px solid #dfe1e6",
-                                  background: "#f4f5f7",
-                                  color: "#42526e",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Importance {e.importance_score.toFixed(2)}
-                              </span>
-                            ) : null}
-
-                            {e?.event_type ? (
-                              <span
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  height: 22,
-                                  padding: "0 8px",
-                                  borderRadius: 999,
-                                  border: "1px solid #dfe1e6",
-                                  background: "#f4f5f7",
-                                  color: "#42526e",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {e.event_type}
-                              </span>
-                            ) : null}
-
-                            {e?.event_date ? (
-                              <span style={{ marginLeft: "auto", fontSize: 12, color: "#7a869a" }}>{e.event_date}</span>
-                            ) : null}
                           </div>
 
-                          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "#172b4d" }}>
-                            {e?.headline ?? "—"}
+                          <div className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-500">
+                              <span className="text-slate-600">{e.eventType || "other"}</span>
+                              {e.importanceScore != null ? (
+                                <>
+                                  <span className="text-slate-300">|</span>
+                                  <span>Score {e.importanceScore}</span>
+                                </>
+                              ) : null}
+                              {e.eventDate ? (
+                                <>
+                                  <span className="text-slate-300">|</span>
+                                  <span>{String(e.eventDate).slice(0, 10)}</span>
+                                </>
+                              ) : null}
+                              {e.regions.length ? (
+                                <>
+                                  <span className="text-slate-300">|</span>
+                                  <span>Regions {e.regions.join(", ")}</span>
+                                </>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-3 text-[13px] leading-6 text-slate-600">
+                              {e.evidenceSummary || "No summary available."}
+                            </div>
                           </div>
-
-                          {e?.evidence_summary ? (
-                            <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: "#42526e", whiteSpace: "pre-line" }}>
-                              {e.evidence_summary}
-                            </div>
-                          ) : null}
-
-                          {Array.isArray(e?.regions) && e.regions.length ? (
-                            <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                              {e.regions.slice(0, 10).map((r: string, j: number) => (
-                                <span
-                                  key={j}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    height: 22,
-                                    padding: "0 8px",
-                                    borderRadius: 999,
-                                    border: "1px solid #dfe1e6",
-                                    background: "#f4f5f7",
-                                    color: "#42526e",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {r}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div style={{ padding: 12, border: "1px solid #dfe1e6", background: "#f4f5f7", color: "#42526e" }}>
-                    No evidence available.
+                  <div className="flex items-center justify-center px-6 py-16 text-sm text-slate-500">
+                    No active news available.
                   </div>
                 )}
-              </div>
-
-              <div
-                style={{
-                  padding: 12,
-                  background: "#f8f9fa",
-                  borderTop: "1px solid #dfe1e6",
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 8,
-                }}
-              >
-                <button className="toolbar-btn" type="button" onClick={closeEvidence}>
-                  Close
-                </button>
               </div>
             </div>
           </div>

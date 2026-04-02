@@ -602,6 +602,7 @@ export default function PredictionMain() {
             </div>
 
             <DetailedBidAnalysis
+              commodity={commodity}
               justTab={justTab}
               setJustTab={setJustTab}
               legendOpen={legendOpen}
@@ -610,7 +611,6 @@ export default function PredictionMain() {
               risksRows={risksRows}
               evidenceRows={evidenceRows}
               caliRows={caliRows}
-              rawEvidenceEvents={rawEvidenceEvents}
             />
           </main>
         </div>
@@ -629,13 +629,13 @@ export default function PredictionMain() {
               <div className="mt-6 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  className="secondaryBtn"
+                  className="cp-btn-outline"
                   onClick={() => setConfirmState({ open: false, message: "", status: null })}
                 >
                   Wait
                 </button>
 
-                <button type="button" className="primaryBtn" onClick={continueWithoutPendingDocs}>
+                <button type="button" className="ui-primary-sm-button" onClick={continueWithoutPendingDocs}>
                   Continue without unavailable files
                 </button>
               </div>
